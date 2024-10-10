@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "pyfet"
+version = "0.1.0"
+description = "Python Forensics Email Tool"
+authors = ["William Zeni"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+typer = "^0.12.5"
+pyfiglet = "^1.0.2"
+requests = "^2.32.3"
+lxml = "^5.3.0"
+xmltodict = "^0.14.1"
+
+[tool.poetry.scripts]
+pyfet = "pyfet.cli:app"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
