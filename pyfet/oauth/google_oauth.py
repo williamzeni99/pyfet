@@ -9,10 +9,9 @@ import requests
 from urllib.parse import urlencode, urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import typer
 from pyfet.oauth.login_interface import ForensicEmail, OAuth
 import webbrowser
-
-
 
 class GoogleOAuth(OAuth):
     def __init__(self, client_id:str, client_secret:str, port:int):
@@ -86,20 +85,36 @@ class GoogleOAuth(OAuth):
         # Perform the search
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
+        next_page_token = results.get('nextPageToken')
+
+        print(f"\r  -> found {len(messages)} emails", end="")
+        page=0
+        # Continue fetching emails if there are more pages
+        while next_page_token:
+            page+=1
+            print(f"\r  -> found {len(messages)} emails... in {page} page ", end="")
+            results = service.users().messages().list(userId='me', q=query, pageToken=next_page_token).execute()
+            messages.extend(results.get('messages', []))
+            next_page_token = results.get('nextPageToken')
+        
         if len(messages)==0:
             raise Exception("no message found")
         
-        for msg in messages:
-            # Get the email message by ID
-            msg_id = msg['id']
-            msg_data = service.users().messages().get(userId='me', id=msg_id, format='raw').execute()
+        print(f"\r  -> found {len(messages)} emails")
 
-            # Decode the raw email
-            raw_email = base64.urlsafe_b64decode(msg_data['raw'])
+        with typer.progressbar(length=len(messages), label="  -> downloading") as progress:
+            for msg in messages:
+                # Get the email message by ID
+                msg_id = msg['id']
+                msg_data = service.users().messages().get(userId='me', id=msg_id, format='raw').execute()
 
-            # Create a ForensicEmail object
-            forensic_email = ForensicEmail(date=datetime.now(), email_id=msg_id, raw=raw_email)
-            forensic_emails.append(forensic_email)
+                # Decode the raw email
+                raw_email = base64.urlsafe_b64decode(msg_data['raw'])
+
+                # Create a ForensicEmail object
+                forensic_email = ForensicEmail(date=datetime.now(), email_id=msg_id, raw=raw_email)
+                forensic_emails.append(forensic_email)
+                progress.update(1)
         
         return forensic_emails
         
@@ -128,9 +143,27 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Authentication complete. Close this window.")
 
+class SilentHTTPServer(HTTPServer):
+
+    def __init__(self, server_address, RequestHandlerClass, bind_and_activate = True):
+        super().__init__(server_address, RequestHandlerClass, bind_and_activate)
+
+    def log_message(self, format, *args):
+        # Non fa nulla, quindi non stampa i log
+        pass
+
+    def log_error(self, format, *args):
+        pass
+
+    def log_date_time_string(self):
+        pass
+
+    def log_request(self, code='-', size='-'):
+        pass
+
 def start_http_server(port):
     server_address = ('', port)
-    httpd = HTTPServer(server_address, OAuthCallbackHandler)
+    httpd = SilentHTTPServer(server_address, OAuthCallbackHandler)
     httpd.handle_request()
     return httpd.auth_code
 

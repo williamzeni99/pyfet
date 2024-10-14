@@ -41,10 +41,11 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
         typer.echo(f"[!] Login Failed:{e}")
         return
     
-    typer.echo("[-] Searching for emails")
     query=""
     if q:
         query=typer.prompt("> insert search query")
+
+    typer.echo("[-] Searching for emails")
 
     try:
         email=oauth.getMe()

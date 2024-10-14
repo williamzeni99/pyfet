@@ -201,7 +201,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
     # Ensure the export path exists
     export_path.mkdir(parents=True, exist_ok=True)
 
-    with typer.progressbar(length=len(emails), label="[\] Saving emails") as progress:
+    with typer.progressbar(length=len(emails), label="[\] Downloading emails") as progress:
         for email in emails:
             # Construct the filename using the email ID
             filename = f"{email.id}.eml"
