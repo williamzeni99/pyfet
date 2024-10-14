@@ -1,6 +1,5 @@
 import typer
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional
 from pyfiglet import Figlet
 import pyfet.commands as commands
 from pathlib import Path
@@ -22,24 +21,19 @@ def print_graphic():
 
 @app.command()
 def get(
-    start_date: Optional[datetime] = typer.Option(default=datetime(1900, 1, 1), help="Start date in YYYY-MM-DD format"),
-    end_date: Optional[datetime] = typer.Option(default=datetime.now(), help="End date in YYYY-MM-DD format"),
     save_path: Optional[Path] = typer.Option(default="./", exists=True, file_okay=False, dir_okay=True,writable=True, help="Path to save the results"),
-    keywords: Optional[bool] = typer.Option(False, help="The tool will ask for search keywords" ),
+    config_path: Optional[Path] = typer.Option(default="./config.json", exists=True, file_okay=True, dir_okay=False,writable=True, help="Path of the configuration file (rename it as config.json)"),
+    q: Optional[bool] = typer.Option(False, help="The tool will ask for a search query" ),
 ):  
     print_graphic()
     typer.echo(f"Fetching emails with the following parameters:")
-    if start_date:
-        formatted = start_date.strftime("%d/%m/%Y")
-        typer.echo(f"  Start date: {formatted}")
-    if end_date:
-        formatted = end_date.strftime("%d/%m/%Y")
-        typer.echo(f"  End date: {formatted}")
     if save_path:
         typer.echo(f"  Save path: {save_path}")
-    if keywords:
-        typer.echo(f"  Search keywords: {keywords}")
+    if config_path:
+        typer.echo(f"  Save path: {config_path}")
+    if q:
+        typer.echo(f"  Search query: {q}")
     
 
     typer.echo("\n")
-    commands.get_cli(start_date, end_date, save_path, keywords)
+    commands.get_cli(save_path=save_path, config_path=config_path, q=q)

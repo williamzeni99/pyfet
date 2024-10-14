@@ -1,17 +1,16 @@
 from datetime import datetime
-from email.message import Message
 from email.policy import default
-import hashlib
 import imaplib
 import json
 from pathlib import Path
 import socket
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 import requests
-from lxml import etree
 import typer
 import xmltodict
-import email
+
+from pyfet.oauth.google_oauth import GoogleOAuth
+from pyfet.oauth.login_interface import ForensicEmail, OAuth
 
 class IMAPConfig:
     def __init__(self, host: str, port: int = 993, ssl: bool = True):
@@ -50,7 +49,6 @@ def get_manual_imap_config() -> IMAPConfig:
     # Return the configured IMAPConfig object
     return IMAPConfig(host=host, port=port, ssl=ssl)
 
-
 def get_automatic_imap_config(email: str):
     # Split the email to get the domain
     parts = email.split("@")
@@ -87,8 +85,7 @@ def get_automatic_imap_config(email: str):
    
     return None, ValueError(f"Config not found: {domain}")  # Handle case with no configuration
 
-
-def login(email:str, password:str, imapConfig):
+def loginIMAP(email:str, password:str, imapConfig):
 
     """
     Logs into an IMAP server with the provided credentials.
@@ -119,70 +116,7 @@ def login(email:str, password:str, imapConfig):
     except (socket.timeout, TimeoutError) as e:
         return None, "connection timed out. Please check your network and server settings."
 
-
-
-class ForensicEmail:
-    def __init__(self, date: datetime, email_id: str, raw: str):
-        self.date = date
-        self.id = email_id
-        self.raw = raw
-        self.sha256 = self.calculate_sha256(raw)
-        self.sha1 = self.calculate_sha1(raw)
-        self.md5 = self.calculate_md5(raw)
-        self.parsed= self.parse(raw)
-    
-    def __str__(self) -> str:
-        return (f"ForensicEmail[ id='{self.id}', "
-                f"date='{self.date.strftime('%Y-%m-%d %H:%M:%S')}', "
-                f"sha256='{self.sha256}', "
-                f"sha1='{self.sha1}', "
-                f"md5='{self.md5}']")
-    
-    @staticmethod
-    def parse(raw:str):
-        """
-        Parse the raw email and return an EmailMessage object.
-
-        :return: Parsed email as an EmailMessage object.
-        """
-        return email.message_from_string(raw, policy=default)
-
-    @staticmethod
-    def calculate_sha256(data: str) -> str:
-        return hashlib.sha256(data.encode('utf-8')).hexdigest()
-
-    @staticmethod
-    def calculate_sha1(data: str) -> str:
-        return hashlib.sha1(data.encode('utf-8')).hexdigest()
-
-    @staticmethod
-    def calculate_md5(data: str) -> str:
-        return hashlib.md5(data.encode('utf-8')).hexdigest()
-
-    def get_basics(self)-> dict:
-        parsed_email = self.parsed
-        sender = parsed_email["From"]
-        subject = parsed_email["Subject"]
-        body = ""
-        if parsed_email.is_multipart():
-            # If the email is multipart, get the payload
-            for part in parsed_email.iter_parts():
-                if part.get_content_type() == 'text/plain':
-                    body = part.get_payload(decode=True).decode(part.get_content_charset())
-                    break
-        else:
-            # If it's not multipart, get the payload directly
-            body = parsed_email.get_payload(decode=True).decode(parsed_email.get_content_charset())
-        
-        return {
-            'Sender': sender,
-            'Subject': subject,
-            'Body': body[:50]+"..."
-        }
-
-
-
-def search_emails(imap_client: imaplib.IMAP4_SSL | imaplib.IMAP4, start_date: datetime, end_date: datetime, keywords: List[str] = None) -> Tuple[List[ForensicEmail], str|None]:
+def search_emailsIMAP(imap_client: imaplib.IMAP4_SSL | imaplib.IMAP4, start_date: datetime, end_date: datetime, keywords: List[str] = None) -> Tuple[List[ForensicEmail], str|None]:
     """
     Search for emails within a date range with specific keywords and return them in raw format.
 
@@ -247,13 +181,14 @@ def search_emails(imap_client: imaplib.IMAP4_SSL | imaplib.IMAP4, start_date: da
 
     return forensic_emails, None
 
-
 def save_emails(path: Path, emails: List[ForensicEmail])->str:
     """
     Save the raw emails in EML format to a new directory named export-(date) under the specified path.
 
     :param path: The base directory where the EML files will be saved.
     :param emails: List of ForensicEmail objects to save.
+
+    :return: export directory name
     """
     # Get the current UTC datetime and format it
     current_utc_time = datetime.utcnow()
@@ -273,20 +208,17 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
             file_path = export_path / filename
             
             # Save the raw email content to the file
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, 'wb') as f:
                 f.write(email.raw)
 
             progress.update(1)
     
     return export_dir_name
 
-
 def generate_report(
     extraction_name: str,
-    email: str,
-    start_date: datetime,
-    end_date: datetime,
-    keywords: List[str],
+    user_email: str,
+    query:str,
     forensic_emails: List[ForensicEmail], 
     save_path: Path
 ):
@@ -304,12 +236,8 @@ def generate_report(
     """
     report = {
         "name": extraction_name,
-        "email": email,
-        "research criteria": {
-            "start-date": start_date.isoformat(),
-            "end-date": end_date.isoformat(),
-            "keywords": keywords
-        },
+        "email": user_email,
+        "search_query":query,
         "emails": []
     }
 
@@ -334,7 +262,43 @@ def generate_report(
     export_path = save_path/extraction_name/report_filename 
     with open(export_path, 'w', encoding='utf-8') as f:
         f.write(report_json)
+    return report_json
 
-    
+def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
 
+    with open(config_path, 'r') as file:
+        config = json.load(file) 
+
+    if domain=="gmail.com":
+        google = config["google"]
+        client_id=google["client_id"]
+        client_secret=google["client_secret"]
+        port=google["server_port"]
+
+        if client_id=="":
+            return None, "you forget to configure client_id in the configuration file"
+        if client_secret=="":
+            return None, "you forget to configure client_secret in the configuration file"
+        if port=="":
+            return None, "you forget to configure port in the configuration file"
+
+        return GoogleOAuth(client_id=client_id, client_secret=client_secret, port=port), None
     
+    #todo implementa outlook
+    
+    return None, "domain not implemented yet"
+
+def load_supported_domains(config_path)-> List[str]:
+
+    with open(config_path, 'r') as file:
+        config = json.load(file) 
+    
+    all_domains = []
+        
+    for provider in config.values():
+        if 'domains' in provider:
+            all_domains.extend(provider['domains'])
+    
+    return all_domains
+        
+
