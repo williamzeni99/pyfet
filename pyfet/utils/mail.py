@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from email.policy import default
 import imaplib
 import json
@@ -191,7 +191,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
     :return: export directory name
     """
     # Get the current UTC datetime and format it
-    current_utc_time = datetime.utcnow()
+    current_utc_time = datetime.now(timezone.utc)
     formatted_date = current_utc_time.strftime("%Y%m%d%H%M%S")
     
     # Create the new directory name
@@ -201,7 +201,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
     # Ensure the export path exists
     export_path.mkdir(parents=True, exist_ok=True)
 
-    with typer.progressbar(length=len(emails), label="[\] Downloading emails") as progress:
+    with typer.progressbar(length=len(emails), label="  -> saving") as progress:
         for email in emails:
             # Construct the filename using the email ID
             filename = f"{email.id}.eml"
@@ -210,6 +210,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
             # Save the raw email content to the file
             with open(file_path, 'wb') as f:
                 f.write(email.raw)
+                email.set_save_timestamp()
 
             progress.update(1)
     
@@ -242,10 +243,11 @@ def generate_report(
     }
 
     # Create a progress bar for processing forensic emails
-    with typer.progressbar(length=len(forensic_emails), label="[\] Generating report") as progress:
+    with typer.progressbar(length=len(forensic_emails), label="  -> writing") as progress:
         for email in forensic_emails:
             report["emails"].append({
-                "download_date": email.date.isoformat(),
+                "request_timestamp": email.request_timestamp.isoformat(),
+                "save_timestamp": email.save_timestamp.isoformat(),
                 "id": email.id,
                 "sha256": email.sha256,
                 "sha1": email.sha1,

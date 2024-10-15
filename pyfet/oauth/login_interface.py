@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 import email
 from email.policy import default
 import hashlib
 from typing import List
 
 class ForensicEmail:
-    def __init__(self, date: datetime, email_id: str, raw: bytes):
-        self.date = date #date of download
+    def __init__(self, email_id: str, raw: bytes):
+        self.request_timestamp = datetime.now(timezone.utc)
         self.id = email_id #message id of the email
         self.raw = raw #raw email file
         self.sha256 = self.calculate_sha256(raw)
@@ -17,10 +17,14 @@ class ForensicEmail:
     
     def __str__(self) -> str:
         return (f"ForensicEmail[ id='{self.id}', "
-                f"date='{self.date.strftime('%Y-%m-%d %H:%M:%S')}', "
+                f"saved_at='{self.save_timestamp.strftime('%Y-%m-%d %H:%M:%S')}', "
                 f"sha256='{self.sha256}', "
                 f"sha1='{self.sha1}', "
                 f"md5='{self.md5}']")
+    
+    def set_save_timestamp(self):
+        self.save_timestamp=datetime.now(timezone.utc)
+
     
     @staticmethod
     def parse(raw:str):

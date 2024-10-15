@@ -112,7 +112,7 @@ class GoogleOAuth(OAuth):
                 raw_email = base64.urlsafe_b64decode(msg_data['raw'])
 
                 # Create a ForensicEmail object
-                forensic_email = ForensicEmail(date=datetime.now(), email_id=msg_id, raw=raw_email)
+                forensic_email = ForensicEmail(email_id=msg_id, raw=raw_email)
                 forensic_emails.append(forensic_email)
                 progress.update(1)
         
@@ -142,12 +142,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         self.send_header("Content-type", "text/html")
         self.end_headers()
         self.wfile.write(b"Authentication complete. Close this window.")
-
-class SilentHTTPServer(HTTPServer):
-
-    def __init__(self, server_address, RequestHandlerClass, bind_and_activate = True):
-        super().__init__(server_address, RequestHandlerClass, bind_and_activate)
-
+    
     def log_message(self, format, *args):
         # Non fa nulla, quindi non stampa i log
         pass
@@ -161,9 +156,21 @@ class SilentHTTPServer(HTTPServer):
     def log_request(self, code='-', size='-'):
         pass
 
+    
+
 def start_http_server(port):
     server_address = ('', port)
-    httpd = SilentHTTPServer(server_address, OAuthCallbackHandler)
+    httpd = HTTPServer(server_address, OAuthCallbackHandler)
     httpd.handle_request()
     return httpd.auth_code
 
+# def start_http_server(port):
+#     server_address = ('', port)
+#     httpd = HTTPServer(server_address, OAuthCallbackHandler)
+    
+#     # Utilizza serve_forever per gestire le richieste continuamente
+#     httpd.timeout = 1  # Imposta un timeout per non bloccare indefinitamente
+#     while not hasattr(httpd, 'auth_code'):  # Continua finché non si riceve il codice
+#         httpd.handle_request()
+    
+#     return httpd.auth_code

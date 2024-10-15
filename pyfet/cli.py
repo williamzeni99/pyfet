@@ -52,3 +52,5 @@ def checktamper(
     """
     print_graphic()
     typer.echo(f"Verify integrity of the files")
+    typer.echo(f"  folder path: {folder}\n")
+    commands.verify_cli(path=folder)
