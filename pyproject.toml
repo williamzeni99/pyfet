@@ -19,6 +19,9 @@ google-auth-httplib2 = "^0.2.0"
 google-api-python-client = "^2.149.0"
 msal = "^1.31.0"
 imapclient = "^3.0.1"
+cryptography = "^43.0.1"
+pyopenssl = "^24.2.1"
+asn1crypto = "^1.5.1"
 
 [tool.poetry.scripts]
 pyfet = "pyfet.cli:app"

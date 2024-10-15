@@ -4,7 +4,6 @@ from pyfiglet import Figlet
 import pyfet.commands as commands
 from pathlib import Path
 
-
 app = typer.Typer()
 
 if __name__ == "__main__":
@@ -41,16 +40,31 @@ def get(
     typer.echo("\n")
     commands.get_cli(save_path=save_path, config_path=config_path, q=q)
 
-@app.command("verify")
+@app.command("check")
 def checktamper(
     folder: Optional[Path] = typer.Argument(default="./",exists=True, file_okay=False, dir_okay=True, writable=True, help="Folder with the emails and the report")
 ):
     """
     It checks the hashes from the report and looks if some email is missing. 
-    NOTE: this method doesn't assure the folder has not been tampered 
-    (no sign verification applied) 
+    NOTE: this method doesn't assure the folder has not been tampered, it just checks
+    the integrity of the content.   
     """
     print_graphic()
-    typer.echo(f"Verify integrity of the files")
+    typer.echo(f"It checks the integrity of the folder")
     typer.echo(f"  folder path: {folder}\n")
-    commands.verify_cli(path=folder)
+    commands.check_cli(path=folder)
+
+@app.command("sign")
+def sign(
+    file: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="File to sign"),
+    days: Optional[int]=typer.Option(default=365, help="days to certificate expiration"),
+):
+    """
+    This method signs the file generating the public and the private keys.
+    If you already have your keys you can use them. 
+    """
+    print_graphic()
+    typer.echo(f"Signing {file} valid for {days} days")
+
+    typer.echo("\n")
+    commands.sign_cli(path=file)

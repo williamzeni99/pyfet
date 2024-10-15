@@ -70,10 +70,11 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
         forensic_emails=emails
         )
     
-    typer.echo("\nREMEMBER TO MANUALLY SIGN YOUR REPORT")
+    typer.echo("\n[!!!] REMEMBER TO MANUALLY SIGN YOUR REPORT")
+    typer.echo("  -> you can sign the report using 'pyfet sign' ")
     
 
-def verify_cli(path:Path):
+def check_cli(path:Path):
 
     report_path = path.joinpath(path.name+"_report.json")
 
@@ -201,7 +202,14 @@ def verify_cli(path:Path):
         else:
             typer.echo("\n\n[!] RESULT: Verification failed")
 
-        
+
+def sign_cli(path:Path, days:int):
+    pass
+
+    
+
+
+
 
 
 

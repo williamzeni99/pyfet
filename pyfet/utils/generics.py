@@ -1,6 +1,7 @@
-
 from pathlib import Path
 import re
+
+
 
 def is_valid_email(email: str) -> bool:
     # Simple regex for validating an email
@@ -18,9 +19,9 @@ def find_json_file(directory:Path):
     
     return None
 
-
 def count_eml_files_in_directory(directory:Path):
     dir_path = Path(directory)
 
     eml_file_count = sum(1 for file in dir_path.glob('*.eml') if file.is_file())
     return eml_file_count
+
