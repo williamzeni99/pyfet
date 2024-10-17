@@ -1,5 +1,6 @@
 
 import json
+import os
 import typer
 from pyfet.oauth.login_interface import ForensicEmail
 import pyfet.utils.mail as mail
@@ -208,6 +209,7 @@ def sign_cli(file:Path,pkey:Path, cert:Path ):
     try:
         typer.echo("[-] Signing")
         tools.sign_pkcs7(input_file_path=file, private_key_path=pkey, cert_path=cert)
+        os.remove(file)
         typer.echo("[-] Sign successful: old file deleted and new signed one generated")
     except Exception as e:
         typer.echo("[!] Signing failed")
@@ -216,13 +218,13 @@ def sign_cli(file:Path,pkey:Path, cert:Path ):
 
 def verify_cli(signed_file: Path, cert: Path):
     typer.echo("[-] Verifing")
+
     try:
         tools.verify_pkcs7(signed_file_path=signed_file, cert_path=cert)
         typer.echo("[-] Verification successful")
     except Exception as e:
-        error_message = e.stderr.decode('utf-8').strip()
         typer.echo("[!] Verification not passed")
-        typer.echo(f"  -> more info: {error_message.lower()}")
+        typer.echo(f"  -> more info: {e}")
     
     
 
