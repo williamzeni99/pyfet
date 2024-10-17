@@ -32,7 +32,7 @@ def get(
     if save_path:
         typer.echo(f"  Save path: {save_path}")
     if config_path:
-        typer.echo(f"  Save path: {config_path}")
+        typer.echo(f"  Config path: {config_path}")
     if q:
         typer.echo(f"  Search query: {q}")
     
@@ -42,7 +42,7 @@ def get(
 
 @app.command("check")
 def checktamper(
-    folder: Optional[Path] = typer.Argument(default="./",exists=True, file_okay=False, dir_okay=True, writable=True, help="Folder with the emails and the report")
+    folder: Optional[Path] = typer.Argument(default=Path().resolve(),exists=True, file_okay=False, dir_okay=True, writable=True, help="Folder with the emails and the report")
 ):
     """
     It checks the hashes from the report and looks if some email is missing. 

@@ -75,7 +75,7 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
     
 
 def check_cli(path:Path):
-
+    
     report_path = path.joinpath(path.name+"_report.json")
 
     typer.echo("[-] Searching for report")
