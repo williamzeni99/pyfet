@@ -57,14 +57,33 @@ def checktamper(
 @app.command("sign")
 def sign(
     file: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="File to sign"),
-    days: Optional[int]=typer.Option(default=365, help="days to certificate expiration"),
+    pkey: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="private_key.pem"),
+    cert: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="certificate.pem"),
 ):
     """
-    This method signs the file generating the public and the private keys.
-    If you already have your keys you can use them. 
+    This method signs the file with the p7m standard.
+    It deletes the old file. 
     """
     print_graphic()
-    typer.echo(f"Signing {file} valid for {days} days")
+    typer.echo(f"Signing {file}")
+    typer.echo(f"  -> private key: {pkey}")
+    typer.echo(f"  -> certificate: {cert}")
 
     typer.echo("\n")
-    commands.sign_cli(path=file)
+    commands.sign_cli(file=file, pkey=pkey, cert=cert)
+
+
+@app.command("verify")
+def verify(
+    file: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="Signed p7m file to verify"),
+    cert: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="certificate.pem"),
+):
+    """
+    This method verify the signed p7m document.
+    """
+    print_graphic()
+    typer.echo(f"Verifying {file}")
+    typer.echo(f"  -> certificate: {cert}")
+
+    typer.echo("\n")
+    commands.verify_cli(signed_file=file, cert=cert)

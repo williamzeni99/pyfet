@@ -203,9 +203,27 @@ def check_cli(path:Path):
             typer.echo("\n\n[!] RESULT: Verification failed")
 
 
-def sign_cli(path:Path, days:int):
-    pass
+def sign_cli(file:Path,pkey:Path, cert:Path ):
+    
+    try:
+        typer.echo("[-] Signing")
+        tools.sign_pkcs7(input_file_path=file, private_key_path=pkey, cert_path=cert)
+        typer.echo("[-] Sign successful: old file deleted and new signed one generated")
+    except Exception as e:
+        typer.echo("[!] Signing failed")
+        typer.echo(f"  -> more info: {e}")
+        
 
+def verify_cli(signed_file: Path, cert: Path):
+    typer.echo("[-] Verifing")
+    try:
+        tools.verify_pkcs7(signed_file_path=signed_file, cert_path=cert)
+        typer.echo("[-] Verification successful")
+    except Exception as e:
+        error_message = e.stderr.decode('utf-8').strip()
+        typer.echo("[!] Verification not passed")
+        typer.echo(f"  -> more info: {error_message.lower()}")
+    
     
 
 
