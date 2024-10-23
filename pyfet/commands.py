@@ -1,8 +1,13 @@
 
+from email import policy
+from email.parser import BytesParser
 import json
 import os
+from typing import List
 import typer
+from pyfet.headerparser import parser
 from pyfet.oauth.login_interface import ForensicEmail
+from pyfet.scanner.scanner import FET
 import pyfet.utils.mail as mail
 from pathlib import Path
 import pyfet.utils.generics as tools
@@ -226,7 +231,42 @@ def verify_cli(signed_file: Path, cert: Path):
         typer.echo("[!] Verification not passed")
         typer.echo(f"  -> more info: {e}")
     
-    
+
+def scan_cli(path: Path):
+    emails:List[FET]=[]
+
+    if path.is_file():
+        typer.echo("[-] Loading eml file")
+        with path.open("rb") as f:
+                eml = f.read()
+                emails.append(FET(raw=eml, mail_id= path.name))
+    else:
+        typer.echo("[-] Loading eml files")
+        eml_files = list(path.glob("*.eml"))
+        typer.echo(f"  -> found {len(eml_files)} emails")
+        if len(eml_files)==0:
+            typer.echo("[!] No emails found: scan aborted")
+            return
+        
+        with typer.progressbar(length=len(eml_files), label="  -> loading") as progress:
+            for eml_file in eml_files:
+                with eml_file.open("rb") as f:
+                    eml = f.read()
+                    emails.append(FET(raw=eml, mail_id= eml_file.name))
+                progress.update(1)
+
+
+        
+    for i in range(100):
+        res, logs= emails[i].check_spf()
+
+        if not res:
+            print("#################")
+            for log in logs:
+                print(log)
+
+
+        
 
 
 

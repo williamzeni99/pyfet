@@ -13,7 +13,6 @@ class ForensicEmail:
         self.sha256 = self.calculate_sha256(raw)
         self.sha1 = self.calculate_sha1(raw)
         self.md5 = self.calculate_md5(raw)
-        self.parsed= self.parse(raw)
     
     def __str__(self) -> str:
         return (f"ForensicEmail[ id='{self.id}', "
@@ -25,15 +24,6 @@ class ForensicEmail:
     def set_save_timestamp(self):
         self.save_timestamp=datetime.now(timezone.utc)
 
-    
-    @staticmethod
-    def parse(raw:str):
-        """
-        Parse the raw email and return an EmailMessage object.
-
-        :return: Parsed email as an EmailMessage object.
-        """
-        return email.message_from_bytes(raw, policy=default)
 
     @staticmethod
     def calculate_sha256(data:bytes) -> str:

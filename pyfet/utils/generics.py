@@ -33,7 +33,6 @@ def count_eml_files_in_directory(directory:Path):
     return eml_file_count
 
 
-
 def sign_pkcs7(input_file_path: Path, private_key_path: Path, cert_path: Path) -> None:
     
     with open(private_key_path, "rb") as file_reader:

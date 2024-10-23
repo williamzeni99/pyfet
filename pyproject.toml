@@ -22,6 +22,10 @@ imapclient = "^3.0.1"
 cryptography = "^43.0.1"
 pyopenssl = "^24.2.1"
 asn1crypto = "^1.5.1"
+dnspython = "^2.7.0"
+pyspf = "^2.0.14"
+lark = {extras = ["interegular"], version = "^1.2.2"}
+regex = "^2024.9.11"
 
 [tool.poetry.scripts]
 pyfet = "pyfet.cli:app"

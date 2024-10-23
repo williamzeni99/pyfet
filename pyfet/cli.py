@@ -87,3 +87,17 @@ def verify(
 
     typer.echo("\n")
     commands.verify_cli(signed_file=file, cert=cert)
+
+
+@app.command("scan")
+def scan(
+    path: Path = typer.Argument(default=Path().resolve(), exists=True, file_okay=True, dir_okay=True, writable=True, help="Scan emails in the folder")
+):
+    """
+    Scan emails in the folder or a single email
+    """
+    print_graphic()
+    typer.echo(f"Scanning {path}")
+
+    typer.echo("\n")
+    commands.scan_cli(path=path)
