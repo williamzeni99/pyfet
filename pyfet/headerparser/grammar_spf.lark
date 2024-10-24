@@ -1,0 +1,66 @@
+//RFC 5322 and RFC 7208 with IPV6 support
+start: header_field
+header_field : [cfws] result FWS [comment FWS] [key_value_list]
+result : "pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror"
+key_value_list : key_value_pair (";" [cfws] key_value_pair )* [";"]
+key_value_pair : key [cfws] "=" (dot_atom | quoted_string | ipv6_address ) //added IPV6
+key : "client-ip" | "envelope-from" | "helo" | "problem" | "receiver" | "identity" | "mechanism" | name
+name : ALPHA (ALPHA | DIGIT | "-" | "_" | ".") 
+
+dot_atom: [cfws] dot_atom_text [cfws]
+dot_atom_text: atext+ ("." atext+)*
+atext: ALPHA | DIGIT | /[!#$%&'*+-\/=?^_`|{}~]/
+
+comment: "(" ([FWS]ccontent)* [FWS]")"
+ccontent: ctext | quoted_pair | comment
+
+ctext: /[\x20-\x7E&&[^\x28\x29\x5C]]/ | OBS_NO_WS_CTL
+
+cfws: (([FWS]comment)* [FWS]) | FWS
+
+FWS: ([(WSP)* CR LF] WSP)| WSP(CR LF WSP)
+
+quoted_string: [cfws] DQUOTE ([FWS] qcontent)* [FWS] DQUOTE [cfws]
+qcontent: QTEXT | quoted_pair
+quoted_pair: ("\\" (VCHAR | WSP)) | obs_qp
+
+QTEXT: /[!#-\[\]-~]/ | OBS_NO_WS_CTL
+OBS_NO_WS_CTL: /[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/
+DQUOTE: /"/
+obs_qp: "\\" (/[\x00]/ | OBS_NO_WS_CTL | VCHAR)
+VCHAR: /[\x21-\x7E]/
+
+%import common.LETTER -> ALPHA
+%import common.DIGIT -> DIGIT
+%import common.CR -> CR
+%import common.LF -> LF
+%import common.WS_INLINE -> WSP
+
+//IPV6 from regex101.com
+
+ipv6_address: [cfws] (ip6_content | ip4_content) [cfws]
+ip6_content: hex_b (":" hex_b) ~ 7 
+    | "::" hex_b (":" hex_b) ~ 0..6
+    | hex_b "::" hex_b (":" hex_b) ~ 0..5
+    | hex_b ":" hex_b "::" hex_b (":" hex_b) ~ 0..4
+    | hex_b (":" hex_b)~ 2  "::" hex_b (":" hex_b) ~ 0..3
+    | hex_b (":" hex_b)~ 3  "::" hex_b (":" hex_b) ~ 0..2
+    | hex_b (":" hex_b)~ 4  "::" hex_b (":" hex_b) ~ 0..1
+    | hex_b (":" hex_b)~ 5  "::" hex_b
+    | hex_b (":" hex_b)~ 6  "::" 
+
+ip4_content: hex_b (":" hex_b) ~ 5 ipv4_address 
+    | "::" hex_b (":" hex_b) ~ 0..4 ipv4_address
+    | hex_b "::" hex_b (":" hex_b) ~ 0..3 ipv4_address
+    | hex_b ":" hex_b "::" hex_b (":" hex_b) ~ 0..2 ipv4_address
+    | hex_b (":" hex_b)~ 2  "::" hex_b (":" hex_b) ~ 0..1 ipv4_address
+    | hex_b (":" hex_b)~ 3  "::" hex_b ipv4_address
+    | hex_b (":" hex_b)~ 4  "::" ipv4_address
+
+
+ipv4_address: IP4_BLOCK ("." IP4_BLOCK) ~ 3
+
+hex_b: HEXDIGIT ~ 1..4
+IP4_BLOCK: /[0-9][0-9]/ | /1 [0-9][0-9]/ | /2[0-4][0-9]/ | /25[0-5]/
+
+HEXDIGIT: /[0-9a-fA-F]/

@@ -67,20 +67,21 @@ class FET:
     def check_spf(self)->Tuple[bool, List[str]]:
         logs=[]
 
-        is_well_formatted = False
+        is_well_formatted = True
         is_pass = False
         manual_check=False
 
         spf=self.parsed.get('Received-SPF')
         logs.append(f"is present: {spf!=None}")
         if spf is not None:
+            spf=spf.lower()
             is_well_formatted = parser.validate_received_spf_header_RFC7208(spf)
             logs.append(f"is well formatted: {is_well_formatted}")
-            result=spf.strip().split(" ")[0] if is_well_formatted else None
-            is_pass= result == "pass"
-            logs.append(f"found result: {result}")
+            # result=spf.strip().split(" ")[0] if is_well_formatted else None
+            # is_pass= result == "pass"
+            # logs.append(f"found result: {result}")
 
-            sender_ip = parser.extract_client_ip(spf)
+            # sender_ip = parser.extract_client_ip(spf)
 
 
         # arc_message_auth=self.parsed.get('ARC-Authentication-Results')
@@ -100,7 +101,7 @@ class FET:
         # manual_check= False
 
 
-        return is_pass and is_well_formatted, logs
+        return is_well_formatted, logs
 
         
         
