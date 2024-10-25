@@ -26,6 +26,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 export-*
+/ipv6
+out*.txt
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

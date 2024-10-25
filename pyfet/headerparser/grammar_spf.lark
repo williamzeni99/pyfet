@@ -1,6 +1,64 @@
-//RFC 5322 and RFC 7208 with IPV6 support
-start: header_field
-header_field : [cfws] result FWS [comment FWS] [key_value_list]
+//RFC 5322, RFC5321 and RFC 7208 with IPV6 support
+header_spf:  ["Received-SPF:"][cfws] result FWS [comment FWS] [key_value_list]
+header_return_path: ["Return-Path:"][FWS] reverse_path [CR LF]
+header_received: ["Received:"] received_token* ";" date_time [CR LF]
+
+//Received
+received_token: word | angle_addr | addr_spec | domain | ipv6_address
+word: quoted_string | atom
+atom: [cfws] atext+ [cfws]
+angle_addr:[cfws]"<" addr_spec ">" [cfws] | obs_angle_addr
+addr_spec: local_part "@" domain
+local_part: dot_atom | quoted_string | obs_local_part
+obs_angle_addr: [cfws]"<" obs_route addr_spec">"[cfws]
+obs_route: obs_domain_list ":"
+obs_domain_list: (cfws | ",")* "@" domain ("," [cfws]["@" domain])*
+obs_local_part: word ("." word)*
+
+date_time: [day_of_week ","] date time [cfws]
+day_of_week: ([FWS] DAYNAME) | obs_day_of_week
+date: day MONTH year
+time: time_of_day zone
+DAYNAME: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun"
+day: ([FWS] (DIGIT~1..2)+ FWS) | obs_day
+MONTH: "Jan" | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec"
+year: (FWS DIGIT~4 FWS) | obs_year
+time_of_day: hour ":" minute [":" second]
+zone: (FWS ("+" | "-") DIGIT~4 (DIGIT)* ) | OBSZONE
+hour: DIGIT~2 | obs_hour
+minute: DIGIT~2 | obs_minute
+second: DIGIT~2 | obs_second
+obs_day_of_week: [cfws] DAYNAME [cfws]
+obs_day: [cfws] DIGIT~1..2 [cfws]
+obs_year: [cfws] DIGIT~2 (DIGIT)* [cfws]
+OBSZONE: "UT" | "GMT" | "EST" | "EDT" | "CST" | "CDT" | "MST" | "MDT" | "PST" | "PDT" | /[\x41-\x49\x4B-\x5A\x61-\x69\x6B-\x7A]/
+
+obs_hour: [cfws] DIGIT~2 [cfws]
+obs_minute: [cfws] DIGIT~2 [cfws]
+obs_second: [cfws] DIGIT~2 [cfws]
+
+//Return Path
+reverse_path: path | "<>"
+path: "<"[adl ":"] mailbox ">"
+adl: at_domain ("," at_domain)*
+at_domain: "@" domain
+domain: subdomain ("." subdomain)*
+subdomain: let_dig [ldh_str]
+let_dig: ALPHA | DIGIT
+ldh_str: (ALPHA | DIGIT | "-")* let_dig
+
+mailbox: local_part_x "@" (domain | address_literal)
+local_part_x: dot_atom_text | quoted_string_smtp
+quoted_string_smtp: DQUOTE qcontent_smtp* DQUOTE
+qcontent_smtp: QTEXTSMPT | QPAIRSMTP
+QTEXTSMPT: /[\x20\x21\x23-\x5B\x5D-\x7E]/
+QPAIRSMTP:/[\x20-\x7E]/
+address_literal: "[" (ipv4_address | ipv6_address_literal | general_address_literal)"]"
+ipv6_address_literal: "IPv6:" ipv6_address
+general_address_literal: ldh_str ":" DCONTENT+
+DCONTENT: /[\x21-\x5A\x5E-\x7E]/
+
+//SPF
 result : "pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror"
 key_value_list : key_value_pair (";" [cfws] key_value_pair )* [";"]
 key_value_pair : key [cfws] "=" (dot_atom | quoted_string | ipv6_address ) //added IPV6

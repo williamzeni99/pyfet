@@ -11,6 +11,7 @@ import xmltodict
 
 from pyfet.oauth.google_oauth import GoogleOAuth
 from pyfet.oauth.login_interface import ForensicEmail, OAuth
+from pyfet.oauth.microsoft_oauth import MicrosoftOAuth
 
 class IMAPConfig:
     def __init__(self, host: str, port: int = 993, ssl: bool = True):
@@ -266,12 +267,20 @@ def generate_report(
         f.write(report_json)
     return report_json
 
+def find_provider_by_domain(domain, json_data) -> str | None:
+    for provider, details in json_data.items():
+        if domain in details.get("domains", []):
+            return provider
+    return None
+
 def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
 
     with open(config_path, 'r') as file:
-        config = json.load(file) 
+        config = json.load(file)
 
-    if domain=="gmail.com":
+    provider = find_provider_by_domain(domain=domain, json_data=config)
+
+    if provider=="google":
         google = config["google"]
         client_id=google["client_id"]
         client_secret=google["client_secret"]
@@ -286,7 +295,34 @@ def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
 
         return GoogleOAuth(client_id=client_id, client_secret=client_secret, port=port), None
     
-    #todo implementa outlook
+    #todo implementa microsoft
+
+    if provider=="microsoft":
+        microsoft=config["microsoft"]
+        client_id=microsoft["client_id"]
+        client_secret=microsoft["client_secret"]
+        port=microsoft["server_port"]
+        tenant_id=microsoft["tenant_id"]
+        secret_id=microsoft["secret_id"]
+
+        if client_id=="":
+            return None, "you forget to configure client_id in the configuration file"
+        if client_secret=="":
+            return None, "you forget to configure client_secret in the configuration file"
+        if port=="":
+            return None, "you forget to configure port in the configuration file"
+        if tenant_id=="":
+            return None, "you forget to configure tenant_id in the configuration file"
+        if secret_id=="":
+            return None, "you forget to configure secret_id in the configuration file"
+        
+        return MicrosoftOAuth(
+                client_id=client_id, 
+                client_secret=client_secret,
+                tenant_id=tenant_id,
+                secret_id=secret_id,
+                port=port
+            ), None
     
     return None, "domain not implemented yet"
 

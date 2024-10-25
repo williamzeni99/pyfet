@@ -77,11 +77,13 @@ class FET:
             spf=spf.lower()
             is_well_formatted = parser.validate_received_spf_header_RFC7208(spf)
             logs.append(f"is well formatted: {is_well_formatted}")
-            # result=spf.strip().split(" ")[0] if is_well_formatted else None
-            # is_pass= result == "pass"
-            # logs.append(f"found result: {result}")
-
-            # sender_ip = parser.extract_client_ip(spf)
+            result=spf.strip().split(" ")
+            result=result[0].strip() if len(result)>0 and result[0].strip()!="" else None
+            is_pass= result == "pass"
+            logs.append(f"found result: {result}")
+            sender_ip = parser.extract_client_ip(spf)
+            logs.append(f"found sender-ip in spf record: {sender_ip}")
+            #THIS PART IS THE SEARCH OF THE IPOTETICAL SENDER IP
 
 
         # arc_message_auth=self.parsed.get('ARC-Authentication-Results')
@@ -101,7 +103,7 @@ class FET:
         # manual_check= False
 
 
-        return is_well_formatted, logs
+        return is_well_formatted and is_pass, logs
 
         
         

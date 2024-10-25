@@ -258,37 +258,39 @@ def scan_cli(path: Path):
                     emails.append(FET(raw=eml, mail_id= eml_file.name))
                 progress.update(1)
 
-    file=Path("/home/williamzeni/Desktop/x.eml")
-    with file.open("rb") as f:
-                eml = f.read()
-                emails.append(FET(raw=eml, mail_id= file.name))
-    
-    count=0
-    for email in emails:
-        result, logs = email.check_spf()
-
-        if not result:
-            count+=1
-            #print("##################")
-            print(f"{email.id}")
-            # for log in logs:
-            #     print(log)
-
-    print(f"\nFOUND:{count}")
-    
-    # count=0
+    # typer.echo("\n[-] SPF Check")
+    # final_result = True
     # for email in emails:
-    #     spf= email.parsed.get("Received-SPF")
-    #     if spf is not None:
-    #         x = parser.extract_client_ip(spf)
-    #         if x is not None and x.__class__== IPv6Address :
-    #             count+=1
-    #             print(email.id)
-    #             pattern = re.compile(r'^((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^(([a-fA-F]|[a-fA-F][a-fA-F0-9\-]*[a-fA-F0-9])\.)*([A-Fa-f]|[A-Fa-f][A-Fa-f0-9\-]*[A-Fa-f0-9])$|^(?:(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){6})(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:::(?:(?:(?:[0-9a-fA-F]{1,4})):){5})(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})))?::(?:(?:(?:[0-9a-fA-F]{1,4})):){4})(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,1}(?:(?:[0-9a-fA-F]{1,4})))?::(?:(?:(?:[0-9a-fA-F]{1,4})):){3})(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,2}(?:(?:[0-9a-fA-F]{1,4})))?::(?:(?:(?:[0-9a-fA-F]{1,4})):){2})(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,3}(?:(?:[0-9a-fA-F]{1,4})))?::(?:(?:[0-9a-fA-F]{1,4})):)(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,4}(?:(?:[0-9a-fA-F]{1,4})))?::)(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9]))\.){3}(?:(?:25[0-5]|(?:[1-9]|1[0-9]|2[0-4])?[0-9])))))))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,5}(?:(?:[0-9a-fA-F]{1,4})))?::)(?:(?:[0-9a-fA-F]{1,4})))|(?:(?:(?:(?:(?:(?:[0-9a-fA-F]{1,4})):){0,6}(?:(?:[0-9a-fA-F]{1,4})))?::)))))$')
-    #             print(f"check: {pattern.match(x.__str__()) is not None}")
-    #             print(f"ip: '{x.__str__()}' ")
+    #     result, logs = email.check_spf()
+    #     final_result = final_result and result
+    #     if not result:
+    #         typer.echo(f"  -> WARNING id: {email.id}")
 
-    # print(f"\nFOUND:{count}") 
+    #         for log in logs:
+    #             typer.echo(f"    -> {log}")
+
+    # typer.echo(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}")
+    
+    found = 0
+    notpass=0
+
+    path = Path("out7.txt")
+    with path.open("w") as file:
+        with typer.progressbar(length=500, label="  -> loading") as progress:
+            for i in range(500):
+                email=emails[i]
+                receiveds=email.parsed.get_all("Received")
+                if receiveds is not None:
+                    found += len(receiveds)
+                    for received in receiveds:
+                        if not parser.validate_received_header_RFC5322(received):
+                            notpass+=1
+                            typer.echo(message=f"HEADER:\n{received}\n#################", file=file)
+                            
+                        
+                progress.update(1)
+                    
+        typer.echo(message=f"found: {found}     notpass: {notpass}", file=file)
 
 
 
