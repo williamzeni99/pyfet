@@ -1,0 +1,57 @@
+from [10.38.141.2] ([10.38.141.2:57886] helo=r166.service.italotreno.it)
+	by momentum21.lon7.cpt.adobe.net (envelope-from <bounce@service.italotreno.it>)
+	(ecelerity 4.2.38.999 r(:)) with ESMTP
+	id 18/A5-26362-92A0ED66; Sun, 08 Sep 2024 13:33:45 -0700
+####################
+by recvd-7cc7f7d978-59wr6 with SMTP id recvd-7cc7f7d978-59wr6-1-6706AA44-12
+	2024-10-09 16:07:32.246256413 +0000 UTC m=+2326284.791768095
+####################
+from MTA2MzAwMzE (unknown)
+	by geopod-ismtpd-7 (SG) with HTTP
+	id Atka28wZSl-ezuDnli8DbA
+	Wed, 09 Oct 2024 16:07:32.232 +0000 (UTC)
+####################
+by recvd-64cdd5f8fb-vcjcj with SMTP id recvd-64cdd5f8fb-vcjcj-1-66FACD78-14
+	2024-09-30 16:10:32.446260457 +0000 UTC m=+1548693.273291425
+####################
+from NDEwNTM0ODk (unknown)
+	by geopod-ismtpd-8 (SG) with HTTP
+	id O_ZSJpjPQEGtKZ12dpWaXw
+	Mon, 30 Sep 2024 16:10:32.432 +0000 (UTC)
+####################
+by recvd-fd8bdb5c6-htrjg with SMTP id recvd-fd8bdb5c6-htrjg-1-671B6FDF-41
+	2024-10-25 10:15:59.681904614 +0000 UTC m=+3687558.678700685
+####################
+from MTEzOTY1NzY (unknown)
+	by geopod-ismtpd-10 (SG) with HTTP
+	id w6oQGtKcRnypyBAnvEgY7g
+	Fri, 25 Oct 2024 10:15:59.626 +0000 (UTC)
+####################
+by recvd-5577bcb48c-xgt5g with SMTP id recvd-5577bcb48c-xgt5g-1-671BB3D2-38
+	2024-10-25 15:05:54.578683328 +0000 UTC m=+3704907.825196627
+####################
+from MTA2MzAwMzE (unknown)
+	by geopod-ismtpd-13 (SG) with HTTP
+	id XbQo6aqFQmOk6YwS2claOg
+	Fri, 25 Oct 2024 15:05:54.563 +0000 (UTC)
+####################
+from 198.37.150.87 (localhost 198.37.150.87)
+  by mail11.mcsignup.com (Mailchimp) with ESMTP id 4VknVk4fCxz362ll0
+  for <arancicarini@hotmail.it>; 09-26-2024
+####################
+by recvd-868695ff98-8x9zb with SMTP id recvd-868695ff98-8x9zb-1-67065EF9-1
+	2024-10-09 10:46:17.020922605 +0000 UTC m=+2306907.112255596
+####################
+from NDEwNTM0ODk (unknown)
+	by geopod-ismtpd-34 (SG) with HTTP
+	id 1mR8zkXrTdKZNQlC7okZyw
+	Wed, 09 Oct 2024 10:46:16.982 +0000 (UTC)
+####################
+by recvd-598c644d4f-6fm2b with SMTP id recvd-598c644d4f-6fm2b-1-66F553E0-12
+	2024-09-26 12:30:24.243849434 +0000 UTC m=+1190022.276322168
+####################
+from Mjc3MzcyNTE (unknown)
+	by geopod-ismtpd-25 (SG) with HTTP
+	id IzS0AsY_S_W6rCJIPzbs9w
+	Thu, 26 Sep 2024 12:30:24.199 +0000 (UTC)
+####################

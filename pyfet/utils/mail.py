@@ -205,7 +205,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
     with typer.progressbar(length=len(emails), label="  -> saving") as progress:
         for email in emails:
             # Construct the filename using the email ID
-            filename = f"{email.id}.eml"
+            filename = f"{email.filename}.eml"
             file_path = export_path / filename
             
             # Save the raw email content to the file
@@ -249,6 +249,7 @@ def generate_report(
             report["emails"].append({
                 "request_timestamp": email.request_timestamp.isoformat(),
                 "save_timestamp": email.save_timestamp.isoformat(),
+                "filename": email.filename,
                 "id": email.id,
                 "sha256": email.sha256,
                 "sha1": email.sha1,

@@ -21,7 +21,7 @@ def print_graphic():
 @app.command("get")
 def get(
     save_path: Optional[Path] = typer.Option(default="./", exists=True, file_okay=False, dir_okay=True,writable=True, help="Path to save the results"),
-    config_path: Optional[Path] = typer.Option(default="./config.json", exists=True, file_okay=True, dir_okay=False,writable=True, help="Path of the configuration file (rename it as config.json)"),
+    config_path: Optional[Path] = typer.Option(default=Path(__file__).parent / "config.json", exists=True, file_okay=True, dir_okay=False,writable=True, help="Path of the configuration file (rename it as config.json)"),
     q: Optional[bool] = typer.Option(default=False, help="The tool will ask for a search query" ),
     log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
 ):  

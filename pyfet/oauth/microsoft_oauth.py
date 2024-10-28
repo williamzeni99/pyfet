@@ -83,7 +83,8 @@ class MicrosoftOAuth(OAuth):
 
         all_emails = []
         next_link = endpoint
-
+        print(f"\r  -> found {len(all_emails)} emails", end="")
+        page =0 
         while next_link:
             # Make the request to the Graph API
             response = requests.get(next_link, headers=headers, params=params if next_link == endpoint else None)
@@ -91,7 +92,9 @@ class MicrosoftOAuth(OAuth):
             # Check if the request was successful
             if response.status_code == 200:
                 # Add the current batch of messages to the list
+                page+=1
                 emails = response.json().get('value', [])
+                print(f"\r  -> found {len(all_emails)} emails... in {page} page ", end="")
                 all_emails.extend(emails)
 
                 # Check for the next page link
@@ -100,6 +103,7 @@ class MicrosoftOAuth(OAuth):
                 # Return an error message if the request failed
                 raise Exception(f"search email failed with status code {response.status_code}: {response.json()}")
 
+        print(f"\r  -> found {len(all_emails)} emails")
         forensic_emails=[]
         with typer.progressbar(length=len(all_emails), label="  -> downloading") as progress:
             for email in all_emails:

@@ -87,7 +87,7 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
     query=""
     if q:
         query=typer.prompt("> insert search query")
-        log(f"  -> inserted: {q}", use_log, log_file)
+        log(f"  -> search query: {query}", use_log, log_file)
 
     log("[-] Searching for emails", use_log, log_file)
 
@@ -100,6 +100,7 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
 
     try:
         emails = oauth.search_emails(query=query)
+        log(f"  -> downloaded {len(emails)} emails", use_log, log_file)
     except Exception as e:
         log("[!] search email failed", use_log, log_file)
         log(f"more info: {e}",use_log, log_file)
@@ -179,6 +180,7 @@ def check_cli(path:Path, use_log:bool):
             try:
                 saved_at = email["save_timestamp"]
                 requested_at = email["request_timestamp"]
+                filename = email["filename"]
                 id= email["id"]
                 sha256 = email["sha256"]
                 sha1 = email["sha1"]
@@ -187,36 +189,36 @@ def check_cli(path:Path, use_log:bool):
                 email_notwell_formatted.append(email)
                 continue
 
-            email_path = path / f"{id}.eml"
+            email_path = path / f"{filename}.eml"
 
             if not email_path.is_file():
-                missing_emails.append(id)
+                missing_emails.append(filename)
                 continue
 
             with open(email_path, 'rb') as y:
                 x=y.read()
                 if(ForensicEmail.calculate_sha256(x)!=sha256):
                     email_tampered.append({
-                        "id":id, 
+                        "filename":filename, 
                         "error": "sha256 missmatch"
                         })
                     continue
 
                 if(ForensicEmail.calculate_sha1(x)!=sha1):
                     email_tampered.append({
-                        "id":id, 
+                        "filename":filename,
                         "error": "sha1 missmatch"
                         })
                     continue
 
                 if(ForensicEmail.calculate_md5(x)!=md5):
                     email_tampered.append({
-                        "id":id, 
+                        "filename":filename,
                         "error": "md5 missmatch"
                         })
                     continue
 
-            email_ok.append(id)
+            email_ok.append(filename)
         
         
         log("\n\n[-] RECAP", use_log, log_file)
@@ -321,42 +323,31 @@ def scan_cli(path: Path, use_log: bool):
             for eml_file in eml_files:
                 with eml_file.open("rb") as f:
                     eml = f.read()
-                    emails.append(FET(raw=eml, mail_id= eml_file.name))
+                    emails.append(FET(raw=eml, mail_id=eml_file.name))
                 progress.update(1)
 
-    # log("\n[-] SPF Check")
-    # final_result = True
-    # for email in emails:
-    #     result, logs = email.check_spf()
-    #     final_result = final_result and result
-    #     if not result:
-    #         log(f"  -> WARNING id: {email.id}")
+    log("\n[-] SPF Check", use_log, log_file)
+    final_result = True
+    not_pass=0
+    with typer.progressbar(length=len(emails), label="  -> scanning") as progress:
+        for email in emails:
+            result, logs = email.check_spf()
+            final_result = final_result and result
+            if not result:
+                not_pass+=1
+                print(f"\r", end="")
+                log(f"  -> WARNING id: {email.id}", use_log, log_file)
 
-    #         for log in logs:
-    #             log(f"    -> {log}")
+                for logx in logs:
+                    log(f"    -> {logx}", use_log, log_file)
+        
+            progress.update(1)
 
-    # log(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}")
+    log(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}", use_log, log_file)
+    if not_pass>0:
+        log(f"  -> spf-failed: {not_pass} / {len(emails)}", use_log, log_file)
     
-    found = 0
-    notpass=0
-
-    path = Path("out7.txt")
-    with path.open("w") as file:
-        with typer.progressbar(length=500, label="  -> loading") as progress:
-            for i in range(500):
-                email=emails[i]
-                receiveds=email.parsed.get_all("Received")
-                if receiveds is not None:
-                    found += len(receiveds)
-                    for received in receiveds:
-                        if not parser.validate_received_header_RFC5322(received):
-                            notpass+=1
-                            log(message=f"HEADER:\n{received}\n#################", file=file)
-                            
-                        
-                progress.update(1)
-                    
-        log(message=f"found: {found}     notpass: {notpass}", file=file)
+    
 
 
 
