@@ -18,6 +18,7 @@ class GoogleOAuth(OAuth):
         self.client_id = client_id
         self.client_secret= client_secret
         self.port=port
+        self.credentials = None
     
     def login(self):
        # build the codes for PKCE auth
@@ -66,10 +67,15 @@ class GoogleOAuth(OAuth):
             expiry=datetime.utcnow() + timedelta(seconds=tokens["expires_in"])
             )
     
-    def getMe(self)->str:
+    def getMe(self)-> str :
+        if self.credentials is None:
+            raise Exception("credentials not found: use login() first")
         service = build('gmail', 'v1', credentials=self.credentials)
         profile = service.users().getProfile(userId='me').execute()
-        return profile['emailAddress']
+        if profile['emailAddress']:
+            return profile['emailAddress']
+        else:
+            raise Exception("something went wrong")  
 
     def search_emails(self, query)-> List[ForensicEmail]:
         """

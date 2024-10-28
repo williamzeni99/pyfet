@@ -12,7 +12,6 @@
             "outlook.com", 
             "hotmail.com"
         ],
-        "tenat_id":"MYTENANT", 
-        "client_secret":"MYSECRET"
+        "client_id":"MYSECRET"
     }
 }

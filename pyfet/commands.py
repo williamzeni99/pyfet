@@ -65,7 +65,12 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
         typer.echo(f"more info: {e}")
         return
 
-    emails = oauth.search_emails(query=query)
+    try:
+        emails = oauth.search_emails(query=query)
+    except Exception as e:
+        typer.echo("[!] search email failed")
+        typer.echo(f"more info: {e}")
+        return
 
     typer.echo(f"[-] Saving emails on device")
     extraction_name = mail.save_emails(path=save_path, emails=emails)

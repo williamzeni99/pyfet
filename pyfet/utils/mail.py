@@ -300,29 +300,11 @@ def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
     if provider=="microsoft":
         microsoft=config["microsoft"]
         client_id=microsoft["client_id"]
-        client_secret=microsoft["client_secret"]
-        port=microsoft["server_port"]
-        tenant_id=microsoft["tenant_id"]
-        secret_id=microsoft["secret_id"]
-
+        
         if client_id=="":
             return None, "you forget to configure client_id in the configuration file"
-        if client_secret=="":
-            return None, "you forget to configure client_secret in the configuration file"
-        if port=="":
-            return None, "you forget to configure port in the configuration file"
-        if tenant_id=="":
-            return None, "you forget to configure tenant_id in the configuration file"
-        if secret_id=="":
-            return None, "you forget to configure secret_id in the configuration file"
-        
-        return MicrosoftOAuth(
-                client_id=client_id, 
-                client_secret=client_secret,
-                tenant_id=tenant_id,
-                secret_id=secret_id,
-                port=port
-            ), None
+       
+        return MicrosoftOAuth(client_id=client_id), None
     
     return None, "domain not implemented yet"
 
