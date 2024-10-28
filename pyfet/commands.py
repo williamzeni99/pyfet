@@ -1,10 +1,12 @@
 
+from datetime import date, datetime
 from email import policy
 from email.parser import BytesParser
+from io import TextIOWrapper
 import json
 import os
 import re
-from typing import List
+from typing import IO, Any, List, Tuple
 import regex
 import typer
 from pyfet.headerparser import parser
@@ -16,15 +18,45 @@ import pyfet.utils.generics as tools
 from ipaddress import IPv6Address
 
 
-def get_cli(save_path:Path, config_path:Path, q:bool):
+def log(message:str, use_log:bool=False, log_file:IO[Any]=None):
+    typer.echo(message=message)
+    if use_log and log_file is not None:
+        typer.echo(message=message, file=log_file)
+
+def initiate_log_file(path:Path, command:str,  params:List[Tuple[str, str]])->IO[Any]:
+    log_path=path/f"{command}_log_{datetime.utcnow()}.txt"
+    log_file= open(log_path, "w")
+
+    x=f"LOG command {command} {datetime.utcnow()}\n"
+    x+="Params:\n"
+
+    for (name, value) in params:
+        if isinstance(value, Path):
+            x+=f"  ->{name}: {value.absolute()}\n"
+        else:  
+            x+=f"  ->{name}: {value}\n"
+
+    x+="\n\n"
+    log(x, True, log_file)
+    return log_file 
+
+
+def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
     try:
+        log_file=None
+        if use_log:
+            log_file = initiate_log_file(save_path, "get", [
+                ("save_path", save_path), 
+                ("config_path", config_path), 
+                ("q", q)
+                ])
         domains= mail.load_supported_domains(config_path=config_path)
 
-        typer.echo("Currently supported domains:")
+        log("Currently supported domains:")
         for x in domains:
-            typer.echo(f"  {x}")
+            log(f"  {x}")
         
-        typer.echo("\n")
+        log("\n")
 
         while True:
             domain = typer.prompt("> insert a domain for login")
@@ -32,50 +64,51 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
             if domain in domains:
                 break
 
-            typer.echo("[!] domain not supported")
+            log("[!] domain not supported")
         
-        typer.echo("[-] Searching OAuth internal config")
+        log("[-] Searching OAuth internal config", use_log, log_file)
         (oauth, err)=mail.getOAuth_from_domain(domain=domain, config_path=config_path)
         if err!=None:
-            typer.echo(f"[!] Some error occurred: {err}")
+            log(f"[!] Some error occurred: {err}", use_log, log_file)
             return
     except Exception as e:
-        typer.echo("[!!!] Something went wrong. Configuration file not found or bad formatting.")
-        typer.echo(f"More info: {e}")
+        log("[!!!] Something went wrong. Configuration file not found or bad formatting.", use_log, log_file)
+        log(f"More info: {e}", use_log, log_file)
         return
 
     try:
-        typer.echo("[-] Starting login phase")
+        log("[-] Starting login phase", use_log, log_file)
         oauth.login()
-        typer.echo("[-] Login successfull")
+        log("[-] Login successfull", use_log, log_file)
     except Exception as e:
-        typer.echo(f"[!] Login Failed:{e}")
+        log(f"[!] Login Failed:{e}", use_log, log_file)
         return
     
     query=""
     if q:
         query=typer.prompt("> insert search query")
+        log(f"  -> inserted: {q}", use_log, log_file)
 
-    typer.echo("[-] Searching for emails")
+    log("[-] Searching for emails", use_log, log_file)
 
     try:
         email=oauth.getMe()
     except Exception as e:
-        typer.echo("[!!!] something strage happend: impossible to read basic data")
-        typer.echo(f"more info: {e}")
+        log("[!!!] something strage happend: impossible to read basic data", use_log, log_file)
+        log(f"more info: {e}", use_log, log_file)
         return
 
     try:
         emails = oauth.search_emails(query=query)
     except Exception as e:
-        typer.echo("[!] search email failed")
-        typer.echo(f"more info: {e}")
+        log("[!] search email failed", use_log, log_file)
+        log(f"more info: {e}",use_log, log_file)
         return
 
-    typer.echo(f"[-] Saving emails on device")
+    log(f"[-] Saving emails on device", use_log, log_file)
     extraction_name = mail.save_emails(path=save_path, emails=emails)
     
-    typer.echo(f"[-] Generating report")
+    log(f"[-] Generating report", use_log, log_file)
     mail.generate_report(
         extraction_name=extraction_name, 
         user_email=email,
@@ -84,50 +117,56 @@ def get_cli(save_path:Path, config_path:Path, q:bool):
         forensic_emails=emails
         )
     
-    typer.echo("\n[!!!] REMEMBER TO MANUALLY SIGN YOUR REPORT")
-    typer.echo("  -> you can sign the report using 'pyfet sign' ")
+    log("\n[!!!] REMEMBER TO MANUALLY SIGN YOUR REPORT", use_log, log_file)
+    log("  -> you can sign the report using 'pyfet sign' ", use_log, log_file)
     
 
-def check_cli(path:Path):
+def check_cli(path:Path, use_log:bool):
     
     report_path = path.joinpath(path.name+"_report.json")
+    
+    log_file = None
+    if use_log:
+        log_file=initiate_log_file(path=path, command="check", params=[
+            ("path", path)
+        ])
 
-    typer.echo("[-] Searching for report")
+    log("[-] Searching for report", use_log, log_file)
 
     try:
         with open(report_path) as report_file:
             report = json.load(report_file)
     except FileNotFoundError:
-        typer.echo(f"  -> file {report_path} not found")
-        typer.echo(f"  -> searching a json in the folder")
+        log(f"  -> file {report_path} not found", use_log, log_file)
+        log(f"  -> searching a json in the folder", use_log, log_file)
 
         jsonfile= tools.find_json_file(path)
         if jsonfile==None:
-            typer.echo("[!] No report found, verify aborted")
+            log("[!] No report found, verify aborted", use_log, log_file)
             return
-        typer.echo(f"  -> found {jsonfile.name}")
+        log(f"  -> found {jsonfile.name}", use_log, log_file)
 
         try:
             with open(jsonfile) as x:
                 report= json.load(x)
         except Exception as e:
-            typer.echo(f"[!!] Something strange happend: {e}")
+            log(f"[!!] Something strange happend: {e}", use_log, log_file)
             return
 
     except Exception as e:
-        typer.echo(f"[!!] Something strange happend: {e}")
+        log(f"[!!] Something strange happend: {e}", use_log, log_file)
         return
 
-    typer.echo("[-] Loading data from report")
+    log("[-] Loading data from report", use_log, log_file)
 
     if "emails" not in report:
-        typer.echo("[!] Report not well formatted: emails missing")
+        log("[!] Report not well formatted: emails missing", use_log, log_file)
         return
     
     emails = report["emails"]
     count_emails = tools.count_eml_files_in_directory(path)
     if len(emails)!= count_emails:
-        typer.echo(f"  -> WARNING: number of emails missmatch (report {len(emails)}/{count_emails} folder)")
+        log(f"  -> WARNING: number of emails missmatch (report {len(emails)}/{count_emails} folder)", use_log, log_file)
     
     missing_emails=[]
     email_tampered=[]
@@ -180,20 +219,20 @@ def check_cli(path:Path):
             email_ok.append(id)
         
         
-        typer.echo("\n\n[-] RECAP")
-        typer.echo(f"  -> email missing: {len(missing_emails)}")
+        log("\n\n[-] RECAP", use_log, log_file)
+        log(f"  -> email missing: {len(missing_emails)}", use_log, log_file)
         for x in missing_emails:
-            typer.echo(f"     {x}")
+            log(f"     {x}", use_log, log_file)
 
-        typer.echo(f"  -> email not well formatted in report (positional referiment): {len(email_notwell_formatted)}")
+        log(f"  -> email not well formatted in report (positional referiment): {len(email_notwell_formatted)}", use_log, log_file)
         for x in email_notwell_formatted:
             pretty = json.dumps(x, indent=4)
             indented_json = "\n".join("    " + line for line in pretty.splitlines())
-            typer.echo(f"{indented_json}")
+            log(f"{indented_json}", use_log, log_file)
         
-        typer.echo(f"  -> email tampered: {len(email_tampered)}")
+        log(f"  -> email tampered: {len(email_tampered)}", use_log, log_file)
         for x in email_tampered:
-            typer.echo(f"     {x['id']}  {x['error']}")
+            log(f"     {x['id']}  {x['error']}")
         
         eml_files=[]
         for file in path.glob('*.eml'):
@@ -206,54 +245,76 @@ def check_cli(path:Path):
 
         missmatch = set_eml_files - set_ok.union(set_tampered)
         missmatch = list(missmatch)
-        typer.echo(f"  -> email in folder but not in the report: {len(missmatch)}")
+        log(f"  -> email in folder but not in the report: {len(missmatch)}", use_log, log_file)
         for x in missmatch:
-            typer.echo(f"     {x}")
+            log(f"     {x}", use_log, log_file)
 
         
         if len(missmatch)+len(missing_emails)+len(email_tampered)+len(email_notwell_formatted)==0:
-            typer.echo("\n\n[-] RESULT: Verification successful")
+            log("\n\n[-] RESULT: Verification successful", use_log, log_file)
         else:
-            typer.echo("\n\n[!] RESULT: Verification failed")
+            log("\n\n[!] RESULT: Verification failed", use_log, log_file)
 
 
-def sign_cli(file:Path,pkey:Path, cert:Path ):
+def sign_cli(file:Path,pkey:Path, cert:Path, use_log:bool ):
     
     try:
-        typer.echo("[-] Signing")
+        log_file = None
+        if use_log:
+            log_file= initiate_log_file(path=file.parent, command="sign", params=[
+                ("file", file), l
+                ("pkey", pkey), 
+                ("cert", cert)
+            ] )
+        log("[-] Signing", use_log, log_file)
         tools.sign_pkcs7(input_file_path=file, private_key_path=pkey, cert_path=cert)
         os.remove(file)
-        typer.echo("[-] Sign successful: old file deleted and new signed one generated")
+        log("[-] Sign successful: old file deleted and new signed one generated", use_log, log_file)
     except Exception as e:
-        typer.echo("[!] Signing failed")
-        typer.echo(f"  -> more info: {e}")
+        log("[!] Signing failed", use_log, log_file)
+        log(f"  -> more info: {e}", use_log, log_file)
         
 
-def verify_cli(signed_file: Path, cert: Path):
-    typer.echo("[-] Verifing")
+def verify_cli(signed_file: Path, cert: Path, use_log:bool):
+
+    log_file = None
+    if use_log:
+        log_file = initiate_log_file(path=signed_file.parent, command="verify", params=[
+            ("signed_file", signed_file), 
+            ("cert", cert)
+        ])
+
+    log("[-] Verifing", use_log, log_file)
 
     try:
         tools.verify_pkcs7(signed_file_path=signed_file, cert_path=cert)
-        typer.echo("[-] Verification successful")
+        log("[-] Verification successful", use_log, log_file)
     except Exception as e:
-        typer.echo("[!] Verification not passed")
-        typer.echo(f"  -> more info: {e}")
+        log("[!] Verification not passed", use_log, log_file)
+        log(f"  -> more info: {e}", use_log, log_file)
     
 
-def scan_cli(path: Path):
+def scan_cli(path: Path, use_log: bool):
+
+    log_file=None
+    if use_log:
+        log_file=initiate_log_file(path=path, command="scan", params=[
+            ("path", path)
+        ])
+
     emails:List[FET]=[]
 
     if path.is_file():
-        typer.echo("[-] Loading eml file")
+        log("[-] Loading eml file", use_log, log_file)
         with path.open("rb") as f:
                 eml = f.read()
                 emails.append(FET(raw=eml, mail_id= path.name))
     else:
-        typer.echo("[-] Loading eml files")
+        log("[-] Loading eml files", use_log, log_file)
         eml_files = list(path.glob("*.eml"))
-        typer.echo(f"  -> found {len(eml_files)} emails")
+        log(f"  -> found {len(eml_files)} emails",use_log, log_file)
         if len(eml_files)==0:
-            typer.echo("[!] No emails found: scan aborted")
+            log("[!] No emails found: scan aborted", use_log, log_file)
             return
         
         with typer.progressbar(length=len(eml_files), label="  -> loading") as progress:
@@ -263,18 +324,18 @@ def scan_cli(path: Path):
                     emails.append(FET(raw=eml, mail_id= eml_file.name))
                 progress.update(1)
 
-    # typer.echo("\n[-] SPF Check")
+    # log("\n[-] SPF Check")
     # final_result = True
     # for email in emails:
     #     result, logs = email.check_spf()
     #     final_result = final_result and result
     #     if not result:
-    #         typer.echo(f"  -> WARNING id: {email.id}")
+    #         log(f"  -> WARNING id: {email.id}")
 
     #         for log in logs:
-    #             typer.echo(f"    -> {log}")
+    #             log(f"    -> {log}")
 
-    # typer.echo(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}")
+    # log(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}")
     
     found = 0
     notpass=0
@@ -290,12 +351,12 @@ def scan_cli(path: Path):
                     for received in receiveds:
                         if not parser.validate_received_header_RFC5322(received):
                             notpass+=1
-                            typer.echo(message=f"HEADER:\n{received}\n#################", file=file)
+                            log(message=f"HEADER:\n{received}\n#################", file=file)
                             
                         
                 progress.update(1)
                     
-        typer.echo(message=f"found: {found}     notpass: {notpass}", file=file)
+        log(message=f"found: {found}     notpass: {notpass}", file=file)
 
 
 
@@ -329,46 +390,46 @@ def scan_cli(path: Path):
 #         if tools.is_valid_email(email):
 #             break
 
-#         typer.echo("[!] Email not valid")
+#         log("[!] Email not valid")
     
 #     password = typer.prompt("> insert password", hide_input=True)
-#     typer.echo("[-] Searching for configuration")
+#     log("[-] Searching for configuration")
 #     (config, error) = mail.get_automatic_imap_config(email)
 #     if error!= None:
-#         typer.echo("[!] Configuration not found")
-#         typer.echo(f"[-] Asking manual configuration")
+#         log("[!] Configuration not found")
+#         log(f"[-] Asking manual configuration")
 #         config = mail.get_manual_imap_config()
 #     else:
-#         typer.echo(f"[-] Configuration found: {config}")
+#         log(f"[-] Configuration found: {config}")
     
-#     typer.echo("[-] Login attempt")
+#     log("[-] Login attempt")
 #     user, err = mail.login(email=email, password=password,imapConfig=config)
 #     if err!=None:
-#         typer.echo(f"[!] Login failed: {err}")
+#         log(f"[!] Login failed: {err}")
 #         return
     
-#     typer.echo("[-] Login successfull")
+#     log("[-] Login successfull")
 
 #     if keywords:
-#         typer.echo("[-] Asking keywords")
+#         log("[-] Asking keywords")
 #         keywords=typer.prompt(">insert keywords divided by space (ex: home people printer)").split(" ")
 #     else:
 #         keywords=None
         
 
-#     typer.echo("[-] Searching emails")
+#     log("[-] Searching emails")
 #     (mails, err) = mail.search_emails(user, start_date,end_date,keywords)
 #     if err!=None:
-#         typer.echo(f"[!] Search failed: {err}")
+#         log(f"[!] Search failed: {err}")
 #         return
-#     typer.echo(f"[-] {len(mails)} emails found")
+#     log(f"[-] {len(mails)} emails found")
 
-#     typer.echo(f"[-] Saving emails")
+#     log(f"[-] Saving emails")
 #     extraction_name= mail.save_emails(path=save_path, emails=mails)
-#     typer.echo(f"[-] Emails saved")
-#     typer.echo(f"[-] Generating report")
+#     log(f"[-] Emails saved")
+#     log(f"[-] Generating report")
 #     mail.generate_report(extraction_name=extraction_name, email=email, start_date=start_date, end_date=end_date, keywords=keywords,forensic_emails=mails, save_path=save_path )
-#     typer.echo(f"[-] Report saved")
+#     log(f"[-] Report saved")
 
 
 

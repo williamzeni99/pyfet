@@ -22,7 +22,8 @@ def print_graphic():
 def get(
     save_path: Optional[Path] = typer.Option(default="./", exists=True, file_okay=False, dir_okay=True,writable=True, help="Path to save the results"),
     config_path: Optional[Path] = typer.Option(default="./config.json", exists=True, file_okay=True, dir_okay=False,writable=True, help="Path of the configuration file (rename it as config.json)"),
-    q: Optional[bool] = typer.Option(False, help="The tool will ask for a search query" ),
+    q: Optional[bool] = typer.Option(default=False, help="The tool will ask for a search query" ),
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
 ):  
     """
     It acquires the emails and creates a report with the file hashes 
@@ -38,11 +39,12 @@ def get(
     
 
     typer.echo("\n")
-    commands.get_cli(save_path=save_path, config_path=config_path, q=q)
+    commands.get_cli(save_path=save_path, config_path=config_path, q=q, use_log=log)
 
 @app.command("check")
 def checktamper(
-    folder: Optional[Path] = typer.Argument(default=Path().resolve(),exists=True, file_okay=False, dir_okay=True, writable=True, help="Folder with the emails and the report")
+    folder: Optional[Path] = typer.Argument(default=Path().resolve(),exists=True, file_okay=False, dir_okay=True, writable=True, help="Folder with the emails and the report"),
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
 ):
     """
     It checks the hashes from the report and looks if some email is missing. 
@@ -52,13 +54,15 @@ def checktamper(
     print_graphic()
     typer.echo(f"It checks the integrity of the folder")
     typer.echo(f"  folder path: {folder}\n")
-    commands.check_cli(path=folder)
+    commands.check_cli(path=folder, use_log=log)
 
 @app.command("sign")
 def sign(
     file: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="File to sign"),
     pkey: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="private_key.pem"),
     cert: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="certificate.pem"),
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
+
 ):
     """
     This method signs the file with the p7m standard.
@@ -70,13 +74,14 @@ def sign(
     typer.echo(f"  -> certificate: {cert}")
 
     typer.echo("\n")
-    commands.sign_cli(file=file, pkey=pkey, cert=cert)
+    commands.sign_cli(file=file, pkey=pkey, cert=cert, use_log=log)
 
 
 @app.command("verify")
 def verify(
     file: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="Signed p7m file to verify"),
     cert: Path = typer.Argument(exists=True, file_okay=True, dir_okay=False, writable=True, help="certificate.pem"),
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
 ):
     """
     This method verify the signed p7m document.
@@ -86,12 +91,13 @@ def verify(
     typer.echo(f"  -> certificate: {cert}")
 
     typer.echo("\n")
-    commands.verify_cli(signed_file=file, cert=cert)
+    commands.verify_cli(signed_file=file, cert=cert, use_log = log)
 
 
 @app.command("scan")
 def scan(
-    path: Path = typer.Argument(default=Path().resolve(), exists=True, file_okay=True, dir_okay=True, writable=True, help="Scan emails in the folder")
+    path: Path = typer.Argument(default=Path().resolve(), exists=True, file_okay=True, dir_okay=True, writable=True, help="Scan emails in the folder"),
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
 ):
     """
     Scan emails in the folder or a single email
@@ -100,4 +106,4 @@ def scan(
     typer.echo(f"Scanning {path}")
 
     typer.echo("\n")
-    commands.scan_cli(path=path)
+    commands.scan_cli(path=path, use_log= log)
