@@ -24,7 +24,7 @@ def log(message:str, use_log:bool=False, log_file:IO[Any]=None):
         typer.echo(message=message, file=log_file)
 
 def initiate_log_file(path:Path, command:str,  params:List[Tuple[str, str]])->IO[Any]:
-    log_path=path/f"{command}_log_{datetime.utcnow()}.txt"
+    log_path=path/f"log_{command}_{datetime.utcnow()}.txt"
     log_file= open(log_path, "w")
 
     x=f"LOG command {command} {datetime.utcnow()}\n"
@@ -300,7 +300,11 @@ def scan_cli(path: Path, use_log: bool):
 
     log_file=None
     if use_log:
-        log_file=initiate_log_file(path=path, command="scan", params=[
+        log_path=path
+        if path.is_file():
+            log_path = path.parent
+
+        log_file=initiate_log_file(path=log_path, command="scan", params=[
             ("path", path)
         ])
 

@@ -39,7 +39,7 @@ obs_second: [cfws] DIGIT~2 [cfws]
 
 //Return Path
 reverse_path: path | "<>"
-path: "<"[adl ":"] mailbox ">"
+path: ["<"][adl ":"] mailbox [">"]
 adl: at_domain ("," at_domain)*
 at_domain: "@" domain
 domain: subdomain ("." subdomain)*
@@ -119,6 +119,6 @@ ip4_content: hex_b (":" hex_b) ~ 5 ipv4_address
 ipv4_address: IP4_BLOCK ("." IP4_BLOCK) ~ 3
 
 hex_b: HEXDIGIT ~ 1..4
-IP4_BLOCK: /[0-9][0-9]/ | /1 [0-9][0-9]/ | /2[0-4][0-9]/ | /25[0-5]/
+IP4_BLOCK: /[0-9][0-9]/ | /1 [0-9][0-9]/ | /2[0-4][0-9]/ | /25[0-5]/ | /[0-9]/
 
 HEXDIGIT: /[0-9a-fA-F]/

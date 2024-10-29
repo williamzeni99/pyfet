@@ -1,6 +1,7 @@
 import ipaddress
 from pathlib import Path
 import re
+from typing import List, Optional, Tuple
 from lark import Lark
 
 
@@ -51,3 +52,28 @@ def extract_client_ip(header: str) -> ipaddress.IPv4Address | ipaddress.IPv6Addr
         pass
     
     return None
+
+def find_all_public_ips(header:str) -> List[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    # Regex per trovare un ip
+    ipv4_6 = r'((?:[0-9]{1,3}(?:[.][0-9]{1,3}){3})|(?:(?:(?:[a-fA-F0-9]{0,4})(?:[:][a-fA-F0-9]{0,4}){0,7})[:](?:(?:[:][a-fA-F0-9]{0,4})|(?:[0-9]{1,3}(?:[.][0-9]{1,3}){3}))))'
+    
+    matches = re.findall(ipv4_6, header)
+    ips=[]
+    for match in matches:
+        try:
+            ip = ipaddress.ip_address(match)
+            if ip.is_global:
+                ips.append(ip)    
+        except:
+            pass
+    
+    return ips
+
+
+def extract_email_and_domain(header: str) -> Tuple[str|None, str|None]:
+
+    try:
+        header = header.replace(">", "").replace("<", "").strip()
+        return header, header.split("@")[1]
+    except:
+        return None, None

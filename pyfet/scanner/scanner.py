@@ -3,6 +3,7 @@ from typing import List, Tuple
 import email
 import dns
 from ipaddress import ip_address, ip_network
+import spf as pyspf
 
 from pyfet.headerparser import parser
 
@@ -71,6 +72,8 @@ class FET:
         is_pass = False
         manual_check=False
 
+        sender_ip=None
+
         spf=self.parsed.get('Received-SPF')
         logs.append(f"is present: {spf!=None}")
         if spf is not None:
@@ -83,7 +86,42 @@ class FET:
             logs.append(f"found result: {result}")
             sender_ip = parser.extract_client_ip(spf)
             logs.append(f"found sender-ip in spf record: {sender_ip}")
-            #THIS PART IS THE SEARCH OF THE IPOTETICAL SENDER IP
+
+            found=False
+            if sender_ip is not None:
+                receiveds = self.parsed.get_all("Received")
+                for received in receiveds:
+                    if parser.validate_received_header_RFC5322(received):
+                        public_ips= parser.find_all_public_ips(received)
+                        if sender_ip in public_ips:
+                            found = True
+                            break
+                
+                logs.append(f"found spf-ip in received header: {found}")
+
+        return_path = self.parsed.get('Return-Path')  
+        logs.append(f"return path is present: {return_path!=None}")
+        email=None
+        domain=None
+        if return_path:     
+            logs.append(f"return-path is well formatted: {parser.validate_return_path_header_RFC5321(return_path)}")
+            email, domain = parser.extract_email_and_domain(return_path)
+
+        
+        if sender_ip is None:
+            #cerca il sender ip dio schifo
+            pass
+        
+        if sender_ip and email and domain:
+            (result, comment) = pyspf.check2(i=sender_ip.__str__(), s=email, h=domain)
+            if result=="pass":
+                manual_check=True
+            logs.append(f"tested spf now [{sender_ip}][{email}]: {result}, {comment}")
+
+        
+                
+                
+
 
 
         # arc_message_auth=self.parsed.get('ARC-Authentication-Results')
@@ -103,7 +141,7 @@ class FET:
         # manual_check= False
 
 
-        return is_well_formatted and is_pass, logs
+        return is_well_formatted and is_pass and manual_check, logs
 
         
         
