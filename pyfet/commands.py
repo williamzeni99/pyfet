@@ -189,7 +189,7 @@ def check_cli(path:Path, use_log:bool):
                 email_notwell_formatted.append(email)
                 continue
 
-            email_path = path / f"{filename}.eml"
+            email_path = path / filename
 
             if not email_path.is_file():
                 missing_emails.append(filename)
@@ -234,15 +234,15 @@ def check_cli(path:Path, use_log:bool):
         
         log(f"  -> email tampered: {len(email_tampered)}", use_log, log_file)
         for x in email_tampered:
-            log(f"     {x['id']}  {x['error']}")
+            log(f"     {x['filename']}  {x['error']}")
         
         eml_files=[]
         for file in path.glob('*.eml'):
             if file.is_file():
-                eml_files.append(file.stem)
+                eml_files.append(file.name)
         
         set_ok=set(email_ok)
-        set_tampered =set([entry["id"] for entry in email_tampered])
+        set_tampered =set([entry["filename"] for entry in email_tampered])
         set_eml_files= set(eml_files)
 
         missmatch = set_eml_files - set_ok.union(set_tampered)

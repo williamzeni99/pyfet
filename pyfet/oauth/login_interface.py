@@ -13,7 +13,7 @@ class ForensicEmail:
         self.sha256 = self.calculate_sha256(raw)
         self.sha1 = self.calculate_sha1(raw)
         self.md5 = self.calculate_md5(raw)
-        self.filename = self.calculate_sha256(email_id.encode())
+        self.filename = f"{self.calculate_sha256(email_id.encode())}.eml"
     
     def __str__(self) -> str:
         return (f"ForensicEmail[ id='{self.id}', "

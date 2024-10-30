@@ -77,3 +77,9 @@ def extract_email_and_domain(header: str) -> Tuple[str|None, str|None]:
         return header, header.split("@")[1]
     except:
         return None, None
+
+
+def find_domain_in_header(domain:str, header:str)->bool:
+    domain= domain.strip().split(".")
+    domain= f"{domain[-2]}.{domain[-1]}"
+    return domain in header

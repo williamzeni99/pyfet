@@ -205,8 +205,7 @@ def save_emails(path: Path, emails: List[ForensicEmail])->str:
     with typer.progressbar(length=len(emails), label="  -> saving") as progress:
         for email in emails:
             # Construct the filename using the email ID
-            filename = f"{email.filename}.eml"
-            file_path = export_path / filename
+            file_path = export_path / email.filename
             
             # Save the raw email content to the file
             with open(file_path, 'wb') as f:

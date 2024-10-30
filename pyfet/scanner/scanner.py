@@ -8,55 +8,6 @@ import spf as pyspf
 from pyfet.headerparser import parser
 
 
-class IpLocation:
-    def __init__(self, ip):
-        self.ip = ip
-    
-    def get_location(self)->str:
-        pass
-
-    def get_owner(self)->str:
-        pass
-        
-
-
-def ip_in_spf(ip:str, domain:str)->bool:
-    def get_spf_record(domain)->str|None:
-        try:
-            answers = dns.resolver.resolve(domain, 'TXT')
-            for record in answers:
-                record_text = record.to_text()
-                if record_text.startswith('"v=spf1'):
-                    return record_text.strip()
-        except Exception:
-            return None
-        return None
-
-    spf=get_spf_record(domain=domain)
-    if spf is None:
-        return False
-    
-    if spf.split(" ")[-1]=="+all":
-        return True
-    
-    for part in spf.split(" "):
-        if part.startswith('ip4:') or part.startswith('ip6:'):
-            cidr= part.split(':')[1]
-            if ip_address(ip) in ip_network(cidr):
-                return True
-        
-        elif part.startswith('include:'):
-            included_domain= part.split(':')[1]
-            if ip_in_spf(ip, included_domain):
-                return True
-
-    return False
-    
-
-
-
-
-
 class FET:
 
     def __init__(self, raw:bytes, mail_id:str):
@@ -72,10 +23,15 @@ class FET:
         is_pass = False
         manual_check=False
 
-        sender_ip=None
+        sender_ips=[]
+        email=None
+        domain=None
 
         spf=self.parsed.get('Received-SPF')
         logs.append(f"is present: {spf!=None}")
+
+        receiveds = self.parsed.get_all("Received")
+
         if spf is not None:
             spf=spf.lower()
             is_well_formatted = parser.validate_received_spf_header_RFC7208(spf)
@@ -89,7 +45,7 @@ class FET:
 
             found=False
             if sender_ip is not None:
-                receiveds = self.parsed.get_all("Received")
+                sender_ips.append(sender_ip)
                 for received in receiveds:
                     if parser.validate_received_header_RFC5322(received):
                         public_ips= parser.find_all_public_ips(received)
@@ -101,22 +57,30 @@ class FET:
 
         return_path = self.parsed.get('Return-Path')  
         logs.append(f"return path is present: {return_path!=None}")
-        email=None
-        domain=None
         if return_path:     
             logs.append(f"return-path is well formatted: {parser.validate_return_path_header_RFC5321(return_path)}")
             email, domain = parser.extract_email_and_domain(return_path)
 
         
-        if sender_ip is None:
-            #cerca il sender ip dio schifo
-            pass
+        if len(sender_ips)==0 and email and domain:
+            #trying to find the sender_ip
+            ips=[]
+            for received in receiveds:
+                if parser.find_domain_in_header(domain=domain, header=received):
+                    ips=parser.find_all_public_ips(header=received)
+                    sender_ips.extend(ips)
+                    break
+            logs.append(f"manual inspection - found possible ips (do not trust this process): {[ip.__str__() for ip in ips] if len(ips)>0 else None }")
+
+            
         
-        if sender_ip and email and domain:
-            (result, comment) = pyspf.check2(i=sender_ip.__str__(), s=email, h=domain)
-            if result=="pass":
-                manual_check=True
-            logs.append(f"tested spf now [{sender_ip}][{email}]: {result}, {comment}")
+        if len(sender_ips)>0 and email and domain:
+            for sender_ip in sender_ips:
+                (result, comment) = pyspf.check2(i=sender_ip.__str__(), s=email, h=domain)
+                logs.append(f"tested spf now [{sender_ip}][{email}]: {result}, {comment}")
+                if result=="pass":
+                    manual_check=True
+                    break
 
         
                 
@@ -163,8 +127,6 @@ class FET:
         #check with external api
         pass
 
-    def build_location_history(self)->List[IpLocation]:
-        pass
 
     def is_phishing(self)->Tuple[bool,str]:
         #check with external api
