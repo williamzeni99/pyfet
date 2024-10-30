@@ -3,6 +3,9 @@ from pathlib import Path
 import re
 from typing import List, Optional, Tuple
 from lark import Lark
+import warnings
+
+warnings.simplefilter("ignore", FutureWarning)
 
 
 grammar__lark_path = Path(__file__).parent / "grammar_spf.lark"
@@ -15,6 +18,7 @@ with open(grammar__lark_path, "r") as file:
 spf_parser = Lark(grammar=grammar_lark, start="header_spf", regex=True)
 return_path_parser = Lark(grammar=grammar_lark, start="header_return_path", regex=True)
 recevied_parser = Lark(grammar=grammar_lark, start="header_received", regex=True)
+authentication_results_parser = Lark(grammar=grammar_lark, start="header_authentication_results", regex=True)
 
 def validate_received_spf_header_RFC7208(header: str) -> bool:
     """
@@ -33,6 +37,13 @@ def validate_return_path_header_RFC5321(header:str)-> bool:
         return_path_parser.parse(header)
         return True
     except:
+        return False
+    
+def validate_authentication_results_header_RFC8601(header:str)-> bool:
+    try:
+        authentication_results_parser.parse(header)
+        return True
+    except Exception as e:
         return False
     
 def validate_received_header_RFC5322(header:str)-> bool:

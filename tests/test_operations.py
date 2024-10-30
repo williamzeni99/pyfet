@@ -54,6 +54,52 @@ def test():
     typer.echo(f"not pass: {not_pass}/{total}")
 
 
+def test3():
+
+    path= Path("/home/williamzeni/Documents/pyfet/export-20241029163340")
+
+    emails:List[FET]=[]
+
+    if path.is_file():
+        print("[-] Loading eml file")
+        with path.open("rb") as f:
+                eml = f.read()
+                emails.append(FET(raw=eml, mail_id= path.name))
+    else:
+        print("[-] Loading eml files" )
+        eml_files = list(path.glob("*.eml"))
+        print(f"  -> found {len(eml_files)} emails")
+        if len(eml_files)==0:
+            print("[!] No emails found: scan aborted")
+            return
+        
+        with typer.progressbar(length=len(eml_files), label="  -> loading") as progress:
+            for eml_file in eml_files:
+                with eml_file.open("rb") as f:
+                    eml = f.read()
+                    emails.append(FET(raw=eml, mail_id=eml_file.name))
+                progress.update(1)
+
+    total=0
+    not_pass=0
+    file = open("/home/williamzeni/Documents/pyfet/test3.txt", "w")
+    with typer.progressbar(length=len(emails), label="  -> scanning") as progress:
+        for email in emails:
+            
+            receives = email.parsed.get_all("Authentication-Results") or []
+            total+=len(receives)
+            for received in receives:
+                if not parser.validate_authentication_results_header_RFC8601(received):
+                    not_pass+=1
+                    typer.echo(message=received, file=file)
+                    typer.echo(message="####################", file=file)
+
+            progress.update(1)
+
+    typer.echo(f"not pass: {not_pass}/{total}", file=file)
+    typer.echo(f"not pass: {not_pass}/{total}")
+
+
 def test2():
 
     path= Path("/home/williamzeni/Documents/pyfet/export-20241028155746")
@@ -101,4 +147,4 @@ def test2():
     typer.echo(f"not pass: {not_pass}/{total}")
          
 
-test2()
+test3()

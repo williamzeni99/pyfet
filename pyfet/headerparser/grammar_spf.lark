@@ -1,7 +1,30 @@
-//RFC 5322, RFC5321 and RFC 7208 with IPV6 support
+//RFC 5322, RFC 5321, RFC 8601 and RFC 7208 with IPV6 support
 header_spf:  ["Received-SPF:"][cfws] result FWS [comment FWS] [key_value_list]
 header_return_path: ["Return-Path:"][FWS] reverse_path [CR LF]
 header_received: ["Received:"] received_token* ";" date_time [CR LF]
+header_authentication_results: ["Authentication-Results:"] authres_payload
+
+
+//Authentication Result
+authres_payload: [cfws] authserv_id [cfws authres_version] (no_result | resinfo+) [cfws] [CR LF]
+authserv_id: value
+authres_version: DIGIT+ [cfws]
+no_result: [cfws] ";" [cfws] "none"
+resinfo: [cfws] ";" methodspec [cfws reasonspec] [cfws propspec+]
+methodspec: [cfws] method [cfws] "=" [cfws] result
+reasonspec: "reason" [cfws] "=" [cfws] value
+propspec: PTYPE [cfws] "." [cfws] property [cfws] "=" pvalue 
+method: keyword [ [cfws] "/" [cfws] method_version]
+method_version: DIGIT+ [cfws]
+PTYPE: "smtp" | "header" | "body" | "policy"
+property: SPECIAL_SMTP_VERB | keyword
+pvalue: [cfws] (value | [[local_part] "@"] domain_name) [cfws]
+value: TOKEN+ | quoted_string
+domain_name: domain
+SPECIAL_SMTP_VERB: "mailfrom" | "rcptto"
+keyword: ldh_str
+TOKEN : /[\x21\x23-\x27\x2A\x2B\x2D\x2E\x30-\x39\x41-\x5A\x5E-\x7A\x7C\x7E]/
+
 
 //Received
 received_token: word | angle_addr | addr_spec | domain | ipv6_address
