@@ -330,26 +330,28 @@ def scan_cli(path: Path, use_log: bool):
                     emails.append(FET(raw=eml, mail_id=eml_file.name))
                 progress.update(1)
 
-    log("\n[-] SPF Check", use_log, log_file)
+    log("\n[-] Scan started", use_log, log_file)
     final_result = True
-    not_pass=0
+    not_pass:List[FET]=[]
     with typer.progressbar(length=len(emails), label="  -> scanning") as progress:
         for email in emails:
-            result, logs = email.check_spf()
+            result, logs = email.scan()
             final_result = final_result and result
-            if not result:
-                not_pass+=1
-                print(f"\r", end="")
-                log(f"  -> WARNING id: {email.id}", use_log, log_file)
+            print(f"\r", end="")
+            log(f"  [-] email: {email.id} ", use_log, log_file)
 
-                for logx in logs:
-                    log(f"    -> {logx}", use_log, log_file)
+            for logx in logs:
+                log(f"      -> {logx}", use_log, log_file)
         
+            if not result:
+                not_pass.append(email)
             progress.update(1)
 
-    log(f"[{'-' if final_result else '!'}] SPF RESULT: {'PASS' if final_result else 'NOT PASS'}", use_log, log_file)
-    if not_pass>0:
-        log(f"  -> spf-failed: {not_pass} / {len(emails)}", use_log, log_file)
+    log(f"\n\n[{'-' if final_result else '!'}] FINAL RESULT: {'PASS' if final_result else 'NOT PASS'}", use_log, log_file)
+    if not final_result:
+        log(f"[!] List of not passed emails")
+        for email in not_pass:
+            log(f"  -> {email.id}")
     
     
 

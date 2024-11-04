@@ -19,6 +19,10 @@ spf_parser = Lark(grammar=grammar_lark, start="header_spf", regex=True)
 return_path_parser = Lark(grammar=grammar_lark, start="header_return_path", regex=True)
 recevied_parser = Lark(grammar=grammar_lark, start="header_received", regex=True)
 authentication_results_parser = Lark(grammar=grammar_lark, start="header_authentication_results", regex=True)
+dkim_parser = Lark(grammar=grammar_lark, start="header_dkim_signature", regex=True)
+
+
+
 
 def validate_received_spf_header_RFC7208(header: str) -> bool:
     """
@@ -42,6 +46,13 @@ def validate_return_path_header_RFC5321(header:str)-> bool:
 def validate_authentication_results_header_RFC8601(header:str)-> bool:
     try:
         authentication_results_parser.parse(header)
+        return True
+    except Exception as e:
+        return False
+
+def validate_dkim_signature_header_RFC8616(header:str)-> bool:
+    try:
+        dkim_parser.parse(header)
         return True
     except Exception as e:
         return False
@@ -94,3 +105,4 @@ def find_domain_in_header(domain:str, header:str)->bool:
     domain= domain.strip().split(".")
     domain= f"{domain[-2]}.{domain[-1]}"
     return domain in header
+

@@ -322,3 +322,4 @@ def load_supported_domains(config_path)-> List[str]:
     return all_domains
         
 
+    

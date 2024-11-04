@@ -1,4 +1,5 @@
-import re
+from email.utils import parsedate_to_datetime
+from logging import Logger
 from typing import List, Tuple
 import email
 import dns
@@ -6,6 +7,9 @@ from ipaddress import ip_address, ip_network
 import spf as pyspf
 
 from pyfet.headerparser import parser
+import dkim as dkimpy
+
+from pyfet.headerparser.utils import my_validate_signature_fields
 
 
 class FET:
@@ -15,113 +19,138 @@ class FET:
         self.id=mail_id
         self.parsed=email.message_from_bytes(raw)
         
+    def scan(self)->Tuple[bool, List[str]]:
 
-    def check_spf(self)->Tuple[bool, List[str]]:
-        logs=[]
+        def check_spf(fet:FET)->Tuple[bool, List[str]]:
+            logs=[]
 
-        is_well_formatted = True
-        is_pass = False
-        manual_check=False
+            is_well_formatted = True
+            is_pass = False
 
-        sender_ips=[]
-        email=None
-        domain=None
+            sender_ips=[]
+            email=None
+            domain=None
 
-        spf=self.parsed.get('Received-SPF')
-        logs.append(f"is present: {spf!=None}")
+            spf=fet.parsed.get('Received-SPF')
+            logs.append(f"spf present: {spf!=None}")
 
-        receiveds = self.parsed.get_all("Received")
+            receiveds = fet.parsed.get_all("Received")
 
-        if spf is not None:
-            spf=spf.lower()
-            is_well_formatted = parser.validate_received_spf_header_RFC7208(spf)
-            logs.append(f"is well formatted: {is_well_formatted}")
-            result=spf.strip().split(" ")
-            result=result[0].strip() if len(result)>0 and result[0].strip()!="" else None
-            is_pass= result == "pass"
-            logs.append(f"found result: {result}")
-            sender_ip = parser.extract_client_ip(spf)
-            logs.append(f"found sender-ip in spf record: {sender_ip}")
+            if spf is not None:
+                spf=spf.lower()
+                is_well_formatted = parser.validate_received_spf_header_RFC7208(spf)
+                logs.append(f"spf well formatted: {is_well_formatted}")
+                result=spf.strip().split(" ")
+                result=result[0].strip() if len(result)>0 and result[0].strip()!="" else None
+                is_pass= result == "pass"
+                logs.append(f"spf result: {result}")
+                sender_ip = parser.extract_client_ip(spf)
+                logs.append(f"found sender-ip in spf record: {sender_ip}")
 
-            found=False
-            if sender_ip is not None:
-                sender_ips.append(sender_ip)
-                for received in receiveds:
-                    if parser.validate_received_header_RFC5322(received):
-                        public_ips= parser.find_all_public_ips(received)
-                        if sender_ip in public_ips:
-                            found = True
-                            break
-                
-                logs.append(f"found spf-ip in received header: {found}")
+                found=False
+                if sender_ip is not None:
+                    sender_ips.append(sender_ip)
+                    for received in receiveds:
+                        if parser.validate_received_header_RFC5322(received):
+                            public_ips= parser.find_all_public_ips(received)
+                            if sender_ip in public_ips:
+                                found = True
+                                break
+                    
+                    logs.append(f"found spf-ip in received header: {found}")
 
-        return_path = self.parsed.get('Return-Path')  
-        logs.append(f"return path is present: {return_path!=None}")
-        if return_path:     
-            logs.append(f"return-path is well formatted: {parser.validate_return_path_header_RFC5321(return_path)}")
-            email, domain = parser.extract_email_and_domain(return_path)
-
-        
-        if len(sender_ips)==0 and email and domain:
-            #trying to find the sender_ip
-            ips=[]
-            for received in receiveds:
-                if parser.find_domain_in_header(domain=domain, header=received):
-                    ips=parser.find_all_public_ips(header=received)
-                    sender_ips.extend(ips)
-                    break
-            logs.append(f"manual inspection - found possible ips (do not trust this process): {[ip.__str__() for ip in ips] if len(ips)>0 else None }")
+            return_path = fet.parsed.get('Return-Path')  
+            logs.append(f"return path is present: {return_path!=None}")
+            if return_path:     
+                logs.append(f"return-path is well formatted: {parser.validate_return_path_header_RFC5321(return_path)}")
+                email, domain = parser.extract_email_and_domain(return_path)
 
             
-        
-        if len(sender_ips)>0 and email and domain:
-            for sender_ip in sender_ips:
-                (result, comment) = pyspf.check2(i=sender_ip.__str__(), s=email, h=domain)
-                logs.append(f"tested spf now [{sender_ip}][{email}]: {result}, {comment}")
-                if result=="pass":
-                    manual_check=True
+            if len(sender_ips)==0 and email and domain:
+                #trying to find the sender_ip
+                ips=[]
+                for received in receiveds:
+                    if parser.find_domain_in_header(domain=domain, header=received):
+                        ips=parser.find_all_public_ips(header=received)
+                        sender_ips.extend(ips)
+                        break
+                logs.append(f"spf - manual inspection - found possible ips (do not trust this process): {[ip.__str__() for ip in ips] if len(ips)>0 else None }")
+
+                
+            
+            if len(sender_ips)>0 and email and domain:
+                for sender_ip in sender_ips:
+                    (result, comment) = pyspf.check2(i=sender_ip.__str__(), s=email, h=domain)
+                    logs.append(f"tested spf now (this is not a digital evidence)\n        [{sender_ip}][{email}]: {result}, {comment}")
+                    if result=="pass":
+                        break
+
+            return is_well_formatted and is_pass, logs
+
+            
+        def check_dkim(fet:FET)->Tuple[bool, List[str]]:
+
+            dkim=fet.parsed.get('DKIM-Signature')
+            logs=[]
+            logs.append(f"dkim present: {dkim!=None}")
+
+            if not dkim:
+                return False, logs
+            
+            result=parser.validate_dkim_signature_header_RFC8616(dkim)
+            logs.append(f"dkim is well formatted: {result}")
+
+            if not result:
+                return False, logs
+
+            receiveds = fet.parsed.get_all("Received")
+            if len(receiveds)==0:
+                logs.append("impossible to verify the dkim signature, no received header found")
+                return False, logs
+            
+            last_received=None
+            for receive in receiveds:
+                if parser.validate_received_header_RFC5322(receive):
+                    last_received=receive
                     break
+            
+            if last_received is None:
+                logs.append("impossible to verify the dkim signature, no received is well formatted")
+                return False, logs
 
-        
-                
-                
+            last_received_date = int(parsedate_to_datetime(last_received.split(';')[-1].strip()).timestamp())
+            
+            tag_list = dkimpy.parse_tag_value(bytes(dkim, "utf-8"))
 
-
-
-        # arc_message_auth=self.parsed.get('ARC-Authentication-Results')
-        # arc_spf=False
-        # if arc_message_auth is not None:
-        #     infos= [info.strip() for info in arc_message_auth.split(";")]
-        #     spf=[info for info in infos if re.match(r'^spf=pass.*', info)]
-        #     if len(spf)>0:
-        #         spf=spf[0]
-        #         arc_spf = spf!=None and spf.split(" ")[0]=="spf=pass"
-        #         logs.append(f"ARC-SPF: {'found' if spf!=None else 'not found'} {' ,'+spf.split(' ')[0] if spf is not None else ''}")
-        #     else:
-        #         logs.append(f"ARC-SPF: not found")
-        # else:
-        #     logs.append(f"ARC-SPF: not found")
-
-        # manual_check= False
+            try:
+                my_validate_signature_fields(sig=tag_list, now=last_received_date) is None
+                logs.append(f"dkim tags well formatted: {True}")
+            except Exception as e:
+                logs.append(f"dkim tags well formatted: {False} - {e}")
+                return False, logs
+            
+            dkimpy.validate_signature_fields= lambda x: None
+            result=dkimpy.verify(message=fet.raw)
+            logs.append(f"dkim is passed: {result}")
 
 
-        return is_well_formatted and is_pass and manual_check, logs
-
-        
+            return result, logs
         
 
-
-
-                
+        def check_dmarc(fet:FET)->Tuple[bool, List[str]]:
+            return False, []
         
+        
+        logs=[]
+        spf_check, spf_logs= check_spf(fet=self)
+        dkim_check, dkim_logs=check_dkim(fet=self)
+        dmarc_check, dmarc_logs = check_dmarc(fet=self)
+        logs.extend(spf_logs)
+        logs.extend(dkim_logs)
+        logs.extend(dmarc_logs)
 
+        return spf_check and dkim_check and dmarc_check, logs
 
-
-    def check_dkmi(self)->Tuple[bool, str]:
-        pass
-    
-    def check_dmarc(self)->Tuple[bool, str]:
-        pass
 
     def has_malware(self)->Tuple[bool, str]:
         #check with external api

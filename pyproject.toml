@@ -26,6 +26,9 @@ dnspython = "^2.7.0"
 lark = {extras = ["interegular"], version = "^1.2.2"}
 regex = "^2024.9.11"
 pyspf = "^2.0.14"
+python-pkcs11 = "^0.7.0"
+nfcpy = "^1.0.4"
+dkimpy = "^1.1.8"
 
 [tool.poetry.scripts]
 pyfet = "pyfet.cli:app"

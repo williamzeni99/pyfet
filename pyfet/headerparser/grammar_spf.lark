@@ -1,9 +1,76 @@
-//RFC 5322, RFC 5321, RFC 8601 and RFC 7208 with IPV6 support
+//RFC 5322, RFC 5321, RFC 8601, RFC 8616 and RFC 7208 with IPV6 support
 header_spf:  ["Received-SPF:"][cfws] result FWS [comment FWS] [key_value_list]
 header_return_path: ["Return-Path:"][FWS] reverse_path [CR LF]
 header_received: ["Received:"] received_token* ";" date_time [CR LF]
 header_authentication_results: ["Authentication-Results:"] authres_payload
+header_dkim_signature: ["DKIM-Signature:"] tag_list
 
+
+//DKIM signature
+tag_list: tag_spec (";" tag_spec)* [";"]
+tag_spec: [FWS] tag_name [FWS] "=" [FWS] tag_value [FWS]
+tag_name: ALPHA ALNUMPUNC*
+tag_value: [tval ((WSP | FWS)+ tval)*]
+tval: VALCHAR+
+VALCHAR: /[\x21-\x3a\x3c-\x7e]/
+ALNUMPUNC : ALPHA | DIGIT | "_"
+
+sig_v_tag: "v" [FWS] "=" [FWS] DIGIT+ //required
+
+sig_a_tag: "a" [FWS] "=" [FWS] sig_a_tag_alg //required
+sig_a_tag_alg: sig_a_tag_k "-" sig_a_tag_h
+sig_a_tag_k: "rsa" | x_sig_a_tag_k
+sig_a_tag_h: "sha1" | "sha256" | x_sig_a_tag_h
+x_sig_a_tag_k: ALPHA (ALPHA|DIGIT)*
+x_sig_a_tag_h:ALPHA (ALPHA|DIGIT)*
+
+sig_b_tag: "b" [FWS] "=" [FWS] sig_b_tag_data //required
+sig_b_tag_data: base64string
+base64string: ALPHADIGITPS ([FWS] ALPHADIGITPS)[[FWS]"="[[FWS]"="]]
+ALPHADIGITPS: ALPHA | DIGIT | "+" | "/"
+
+sig_bh_tag: "bh" [FWS] "=" [FWS] sig_bh_tag_data //required
+sig_bh_tag_data: base64string
+
+sig_c_tag: "c" [FWS] "=" [FWS] sig_c_tag_alg ["/" sig_c_tag_alg]
+sig_c_tag_alg: "simple" | "relaxed" | x_sig_c_tag_alg
+x_sig_c_tag_alg: hyphenated_word
+hyphenated_word: ALPHA [(ALPHA | DIGIT | "-")* (ALPHA|DIGIT)]
+
+sig_d_tag: "d" [FWS] "=" [FWS] domain_name //required
+
+sign_h_tag: "h" [FWS] "=" [FWS] hdr_name ([FWS] ":" [FWS] hdr_name)* //required
+hdr_name:field_name
+field_name: ftext+
+ftext: /[\x21-\x39\x3B-\x7E]/
+
+sig_i_tag: "i" [FWS] "=" [FWS] [local_part_x] "@" domain_name
+
+sig_l_tag: "l" [FWS] "=" [FWS] DIGIT~1..76
+
+sig_q_tag: "q" [FWS] "=" [FWS] sig_q_tag_method ([FWS] ":" [FWS] sig_q_tag_method)*
+sig_q_tag_method: "dns/txt" | x_sig_q_tag_type ["/" x_sig_q_tag_args]
+x_sig_q_tag_type: hyphenated_word 
+x_sig_q_tag_args: qp_hdr_value
+qp_hdr_value: dkim_quoted_printable
+dkim_quoted_printable: (FWS | hex_octet | dkim_safe_char)
+dkim_safe_char: /[\x21-\x3a\x3c\x3e-\x7e]/ | utf8_2 | utf8_3 | utf8_4
+hex_octet: "=" HEXDIGIT~2
+utf8_2: /[\xc2-\xdf]/ UTF8_TAIL 
+utf8_3: (/\xE0/ /[\xA0-\xBF]/ UTF8_TAIL) | (/[\xE1-\xEC]/ UTF8_TAIL~2) | (/\xED/ /[\x80-\x9F]/ UTF8_TAIL) | (/[\xEE-\xEF]/ UTF8_TAIL~2)
+utf8_4: (/\xF0/ /[\x90-\xBF]/ UTF8_TAIL~2) | (/[\xF1-\xF3]/ UTF8_TAIL~3) | (/\xF4/ /[\x80-\x8F]/ UTF8_TAIL~2)
+UTF8_TAIL:/[\x80-\xBF]/
+
+
+sig_s_tag: "s" [FWS] "=" [FWS] selector //required
+selector : subdomain ("." subdomain)*
+
+sig_t_tag: "t" [FWS] "=" [FWS] DIGIT~1..12
+
+sig_x_tag: "x" [FWS] "=" [FWS] DIGIT~1..12
+
+sig_z_tag: "z" [FWS] "=" [FWS] sig_z_tag_copy ("|" [FWS] sig_z_tag_copy)*
+sig_z_tag_copy: hdr_name [FWS] ":" qp_hdr_value
 
 //Authentication Result
 authres_payload: [cfws] authserv_id [cfws authres_version] (no_result | resinfo+) [cfws] [CR LF]
