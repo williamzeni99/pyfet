@@ -6,6 +6,7 @@ from io import TextIOWrapper
 import json
 import os
 import re
+import shutil
 from typing import IO, Any, List, Tuple
 import regex
 import typer
@@ -120,6 +121,8 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
     
     log("\n[!!!] REMEMBER TO MANUALLY SIGN YOUR REPORT", use_log, log_file)
     log("  -> you can sign the report using 'pyfet sign' ", use_log, log_file)
+    log_path= Path(log_file.name).resolve()
+    shutil.move(log_path, save_path/extraction_name)
     
 
 def check_cli(path:Path, use_log:bool):
@@ -264,7 +267,7 @@ def sign_cli(file:Path,pkey:Path, cert:Path, use_log:bool ):
         log_file = None
         if use_log:
             log_file= initiate_log_file(path=file.parent, command="sign", params=[
-                ("file", file), l
+                ("file", file), 
                 ("pkey", pkey), 
                 ("cert", cert)
             ] )

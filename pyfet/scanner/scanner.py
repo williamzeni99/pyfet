@@ -102,36 +102,39 @@ class FET:
 
             if not result:
                 return False, logs
-
-            receiveds = fet.parsed.get_all("Received")
-            if len(receiveds)==0:
-                logs.append("impossible to verify the dkim signature, no received header found")
-                return False, logs
-            
-            last_received=None
-            for receive in receiveds:
-                if parser.validate_received_header_RFC5322(receive):
-                    last_received=receive
-                    break
-            
-            if last_received is None:
-                logs.append("impossible to verify the dkim signature, no received is well formatted")
-                return False, logs
-
-            last_received_date = int(parsedate_to_datetime(last_received.split(';')[-1].strip()).timestamp())
             
             tag_list = dkimpy.parse_tag_value(bytes(dkim, "utf-8"))
 
-            try:
-                my_validate_signature_fields(sig=tag_list, now=last_received_date) is None
-                logs.append(f"dkim tags well formatted: {True}")
-            except Exception as e:
-                logs.append(f"dkim tags well formatted: {False} - {e}")
-                return False, logs
+            last_received_date=None
+            if b'x' in tag_list:
+                receiveds = fet.parsed.get_all("Received")
+                if len(receiveds)==0:
+                    logs.append("impossible to verify the dkim signature, no received header found")
+                    return False, logs
+                
+                last_received=None
+                for receive in receiveds:
+                    if parser.validate_received_header_RFC5322(receive):
+                        last_received=receive
+                        break
+                
+                if last_received is None:
+                    logs.append("impossible to verify the dkim signature, no received is well formatted")
+                    return False, logs
+
+                last_received_date = int(parsedate_to_datetime(last_received.split(';')[-1].strip()).timestamp())
+
+                try:
+                    my_validate_signature_fields(sig=tag_list, now=last_received_date) is None
+                    logs.append(f"dkim tags well formatted: {True}")
+                except Exception as e:
+                    logs.append(f"dkim tags well formatted: {False} - {e}")
+                    return False, logs
             
-            dkimpy.validate_signature_fields= lambda x: None
+                dkimpy.validate_signature_fields= lambda x: None
+
             result=dkimpy.verify(message=fet.raw)
-            logs.append(f"dkim is passed: {result}")
+            logs.append(f"dkim is passed: {result} {'with date ' + str(last_received_date) if last_received_date else ''}")
 
 
             return result, logs
