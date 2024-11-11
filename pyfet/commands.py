@@ -53,23 +53,24 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
                 ])
 
         domains= mail.load_supported_domain(config_path=config_path)
+        domains.append("IMAP")
 
-        log("Currently supported authentication providers:")
+        log("Currently supported authentication method:")
         for x in domains:
             log(f"  {x}")
         
         log("\n")
 
         while True:
-            domain = typer.prompt("> insert a provider for login")
+            domain = typer.prompt("> insert a method for login")
 
             if domain in domains:
                 break
 
-            log("[!] domain not supported")
-        
+            log("[!] method not supported")
+    
         log("[-] Searching OAuth internal config", use_log, log_file)
-        (oauth, err)=mail.getOAuth_from_domain(domain=domain, config_path=config_path)
+        (oauth, err)=mail.getAuth_from_domain(domain=domain, config_path=config_path)
         if err!=None:
             log(f"[!] Some error occurred: {err}", use_log, log_file)
             return

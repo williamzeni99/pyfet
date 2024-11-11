@@ -8,9 +8,10 @@ from typing import List, Tuple
 import requests
 import typer
 import xmltodict
+from pyfet.oauth.IMAP_auth import IMAPAuth
 
 from pyfet.oauth.google_oauth import GoogleOAuth
-from pyfet.oauth.login_interface import ForensicEmail, OAuth
+from pyfet.oauth.login_interface import ForensicEmail, Auth
 from pyfet.oauth.microsoft_oauth import MicrosoftOAuth
 
 class IMAPConfig:
@@ -117,70 +118,70 @@ def loginIMAP(email:str, password:str, imapConfig):
     except (socket.timeout, TimeoutError) as e:
         return None, "connection timed out. Please check your network and server settings."
 
-def search_emailsIMAP(imap_client: imaplib.IMAP4_SSL | imaplib.IMAP4, start_date: datetime, end_date: datetime, keywords: List[str] = None) -> Tuple[List[ForensicEmail], str|None]:
-    """
-    Search for emails within a date range with specific keywords and return them in raw format.
+# def search_emailsIMAP(imap_client: imaplib.IMAP4_SSL | imaplib.IMAP4, start_date: datetime, end_date: datetime, keywords: List[str] = None) -> Tuple[List[ForensicEmail], str|None]:
+#     """
+#     Search for emails within a date range with specific keywords and return them in raw format.
 
-    :param imap_client: The authenticated and connected IMAP client.
-    :param start_date: Start date for the search (datetime object).
-    :param end_date: End date for the search (datetime object).
-    :param keywords: Optional list of keywords to search for in the subject or body of the emails.
-    :return: List of emails in raw format.
-    """
+#     :param imap_client: The authenticated and connected IMAP client.
+#     :param start_date: Start date for the search (datetime object).
+#     :param end_date: End date for the search (datetime object).
+#     :param keywords: Optional list of keywords to search for in the subject or body of the emails.
+#     :return: List of emails in raw format.
+#     """
 
-    # Convert the datetime objects to the required IMAP format (DD-Month-YYYY)
-    def format_date(date_obj: datetime) -> str:
-        return date_obj.strftime("%d-%b-%Y")
+#     # Convert the datetime objects to the required IMAP format (DD-Month-YYYY)
+#     def format_date(date_obj: datetime) -> str:
+#         return date_obj.strftime("%d-%b-%Y")
 
-    start_date_imap = format_date(start_date) if start_date else None
-    end_date_imap = format_date(end_date) if end_date else None
+#     start_date_imap = format_date(start_date) if start_date else None
+#     end_date_imap = format_date(end_date) if end_date else None
 
-    # Select the inbox
-    imap_client.select("INBOX")
+#     # Select the inbox
+#     imap_client.select("INBOX")
 
-    # Build the search query
-    search_criteria = []
-    if start_date_imap:
-        search_criteria.append(f'SINCE "{start_date_imap}"')
-    if end_date_imap:
-        search_criteria.append(f'BEFORE "{end_date_imap}"')
+#     # Build the search query
+#     search_criteria = []
+#     if start_date_imap:
+#         search_criteria.append(f'SINCE "{start_date_imap}"')
+#     if end_date_imap:
+#         search_criteria.append(f'BEFORE "{end_date_imap}"')
 
-    if keywords:
-        keyword_query = ' '.join([f'TEXT "{keyword}"' for keyword in keywords])
-        search_criteria.append(keyword_query)
+#     if keywords:
+#         keyword_query = ' '.join([f'TEXT "{keyword}"' for keyword in keywords])
+#         search_criteria.append(keyword_query)
 
-    search_criteria_str = ' '.join(search_criteria)
+#     search_criteria_str = ' '.join(search_criteria)
 
-    # Execute the search
-    result, data = imap_client.search(None, search_criteria_str)
+#     # Execute the search
+#     result, data = imap_client.search(None, search_criteria_str)
 
-    if result != 'OK':
-        return [],"Error occurred while searching for emails."
+#     if result != 'OK':
+#         return [],"Error occurred while searching for emails."
 
-    email_ids = data[0].split()
+#     email_ids = data[0].split()
 
-    forensic_emails = []
+#     forensic_emails = []
 
-    # Fetch emails in raw format
-    for email_id in email_ids:
-        result, email_data = imap_client.fetch(email_id, '(RFC822)')
+#     # Fetch emails in raw format
+#     for email_id in email_ids:
+#         result, email_data = imap_client.fetch(email_id, '(RFC822)')
         
-        if result == 'OK':
-            raw_email = email_data[0][1].decode('utf-8')
-            email_date = datetime.now()  # Or retrieve from the email header if needed
-            forensic_email = ForensicEmail(
-                date=email_date,
-                email_id=email_id.decode('utf-8'),
-                raw=raw_email
-            )
-            forensic_emails.append(forensic_email)
-        else:
-            return [],f"Error retrieving email with ID {email_id}."
+#         if result == 'OK':
+#             raw_email = email_data[0][1].decode('utf-8')
+#             email_date = datetime.now()  # Or retrieve from the email header if needed
+#             forensic_email = ForensicEmail(
+#                 date=email_date,
+#                 email_id=email_id.decode('utf-8'),
+#                 raw=raw_email
+#             )
+#             forensic_emails.append(forensic_email)
+#         else:
+#             return [],f"Error retrieving email with ID {email_id}."
         
-    if len(forensic_emails)==0:
-        return [],f"no email found"
+#     if len(forensic_emails)==0:
+#         return [],f"no email found"
 
-    return forensic_emails, None
+#     return forensic_emails, None
 
 def save_emails(path: Path, emails: List[ForensicEmail])->str:
     """
@@ -268,8 +269,7 @@ def generate_report(
     return report_json
 
 
-
-def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
+def getAuth_from_domain(domain:str, config_path)-> Tuple[Auth, str]:
 
     with open(config_path, 'r') as file:
         config = json.load(file)
@@ -300,6 +300,9 @@ def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
             return None, "you forget to configure client_id in the configuration file"
        
         return MicrosoftOAuth(client_id=client_id), None
+
+    if domain=="IMAP":
+        return IMAPAuth(), None
     
     return None, "domain not implemented yet"
 

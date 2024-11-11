@@ -10,10 +10,10 @@ from urllib.parse import urlencode, urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import typer
-from pyfet.oauth.login_interface import ForensicEmail, OAuth
+from pyfet.oauth.login_interface import ForensicEmail, Auth
 import webbrowser
 
-class GoogleOAuth(OAuth):
+class GoogleOAuth(Auth):
     def __init__(self, client_id:str, client_secret:str, port:int):
         self.client_id = client_id
         self.client_secret= client_secret
@@ -77,7 +77,7 @@ class GoogleOAuth(OAuth):
         else:
             raise Exception("something went wrong")  
 
-    def search_emails(self, query)-> List[ForensicEmail]:
+    def search_emails(self, query:str)-> List[ForensicEmail]:
         """
         Search Gmail for emails within a date range containing specified keywords.
         :param query: custom research query from given api

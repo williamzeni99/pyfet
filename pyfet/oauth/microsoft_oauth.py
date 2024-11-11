@@ -2,10 +2,10 @@ from typing import List
 
 import requests
 import typer
-from pyfet.oauth.login_interface import ForensicEmail, OAuth
+from pyfet.oauth.login_interface import ForensicEmail, Auth
 from msal import PublicClientApplication
 
-class MicrosoftOAuth(OAuth):
+class MicrosoftOAuth(Auth):
 
     def __init__(self, client_id:str):
         self.app = PublicClientApplication(
@@ -59,7 +59,7 @@ class MicrosoftOAuth(OAuth):
             
     
     
-    def search_emails(self, query)-> List[ForensicEmail]:
+    def search_emails(self, query:str)-> List[ForensicEmail]:
         """
         Use the user or token granted from login to get a List of Forensic Emails
         :param query: custom research query from given api

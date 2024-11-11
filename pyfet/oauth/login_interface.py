@@ -59,7 +59,7 @@ class ForensicEmail:
             'Body': body[:50]+"..."
         }
 
-class OAuth(ABC):
+class Auth(ABC):
     @abstractmethod
     def login(self):
         """Get access token or authentication in general"""
@@ -71,7 +71,7 @@ class OAuth(ABC):
         pass
     
     @abstractmethod
-    def search_emails(self, query)-> List[ForensicEmail]:
+    def search_emails(self, query:str)-> List[ForensicEmail]:
         """
         Use the user or token granted from login to get a List of Forensic Emails
         :param query: custom research query from given api
