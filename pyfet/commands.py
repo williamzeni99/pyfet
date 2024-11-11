@@ -170,7 +170,8 @@ def check_cli(path:Path, use_log:bool):
         return
     
     emails = report["emails"]
-    count_emails = tools.count_eml_files_in_directory(path)
+    emails_path = path / "emails"
+    count_emails = tools.count_eml_files_in_directory(emails_path)
     if len(emails)!= count_emails:
         log(f"  -> WARNING: number of emails missmatch (report {len(emails)}/{count_emails} folder)", use_log, log_file)
     
@@ -194,7 +195,7 @@ def check_cli(path:Path, use_log:bool):
                 email_notwell_formatted.append(email)
                 continue
 
-            email_path = path / filename
+            email_path = emails_path / filename
 
             if not email_path.is_file():
                 missing_emails.append(filename)
