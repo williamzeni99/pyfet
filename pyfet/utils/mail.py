@@ -267,20 +267,15 @@ def generate_report(
         f.write(report_json)
     return report_json
 
-def find_provider_by_domain(domain, json_data) -> str | None:
-    for provider, details in json_data.items():
-        if domain in details.get("domains", []):
-            return provider
-    return None
+
 
 def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
 
     with open(config_path, 'r') as file:
         config = json.load(file)
 
-    provider = find_provider_by_domain(domain=domain, json_data=config)
 
-    if provider=="google":
+    if domain=="google":
         google = config["google"]
         client_id=google["client_id"]
         client_secret=google["client_secret"]
@@ -297,7 +292,7 @@ def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
     
     #todo implementa microsoft
 
-    if provider=="microsoft":
+    if domain=="microsoft":
         microsoft=config["microsoft"]
         client_id=microsoft["client_id"]
         
@@ -308,18 +303,12 @@ def getOAuth_from_domain(domain:str, config_path)-> Tuple[OAuth, str]:
     
     return None, "domain not implemented yet"
 
-def load_supported_domains(config_path)-> List[str]:
+def load_supported_domain(config_path)-> List[str]:
 
     with open(config_path, 'r') as file:
         config = json.load(file) 
     
-    all_domains = []
-        
-    for provider in config.values():
-        if 'domains' in provider:
-            all_domains.extend(provider['domains'])
-    
-    return all_domains
+    return list(config.keys())
         
 
     

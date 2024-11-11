@@ -1,17 +1,10 @@
 {
     "google":{
-        "domains":[
-            "gmail.com"
-        ],
         "client_id":"MYCLIENT", 
         "client_secret":"MYSECRET", 
         "server_port":8000
     }, 
     "microsoft":{
-        "domains":[
-            "outlook.com", 
-            "hotmail.com"
-        ],
         "client_id":"MYSECRET"
     }
 }

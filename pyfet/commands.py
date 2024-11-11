@@ -51,16 +51,17 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
                 ("config_path", config_path), 
                 ("q", q)
                 ])
-        domains= mail.load_supported_domains(config_path=config_path)
 
-        log("Currently supported domains:")
+        domains= mail.load_supported_domain(config_path=config_path)
+
+        log("Currently supported authentication providers:")
         for x in domains:
             log(f"  {x}")
         
         log("\n")
 
         while True:
-            domain = typer.prompt("> insert a domain for login")
+            domain = typer.prompt("> insert a provider for login")
 
             if domain in domains:
                 break
