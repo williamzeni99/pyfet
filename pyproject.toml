@@ -29,6 +29,8 @@ pyspf = "^2.0.14"
 python-pkcs11 = "^0.7.0"
 nfcpy = "^1.0.4"
 dkimpy = "^1.1.8"
+scapy = "^2.6.1"
+mitmproxy = "^11.0.0"
 
 [tool.poetry.scripts]
 pyfet = "pyfet.cli:app"
