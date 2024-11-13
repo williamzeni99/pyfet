@@ -2,6 +2,7 @@
 from datetime import date, datetime
 from email import policy
 from email.parser import BytesParser
+import hashlib
 from io import TextIOWrapper
 import json
 import os
@@ -184,6 +185,71 @@ def check_cli(path:Path, use_log:bool):
 
     log("[-] Loading data from report", use_log, log_file)
 
+    traffic_status= True
+    if ("session_keys" in report and "recorded_pcap" not in report) or ("session_keys" not in report and "recorded_pcap" in report):
+        log("[!] Report not well formatted: one between session_keys and recorded_pcap is missing. If one of them is present the other one must be present too. The check of the traffic will be ignored, but this is strong warning", use_log, log_file)
+        traffic_status=False
+    
+    if "session_keys" in report and "recorded_pcap" in report:
+        recorded_pcap = report["recorded_pcap"]
+        session_keys = report["session_keys"]
+        try:
+            pcap_path = path/recorded_pcap["path"]
+            with open(pcap_path, "rb") as file:
+                raw = file.read()
+                sha256 = hashlib.sha256(raw).hexdigest()
+                sha1 = hashlib.sha1(raw).hexdigest()
+                md5 = hashlib.md5(raw).hexdigest()
+                
+                sha256_ok=False
+                sha1_ok=False
+                md5_ok= False
+                if "sha256" in recorded_pcap and sha256==recorded_pcap["sha256"]:
+                    sha256_ok=True
+                if "sha1" in recorded_pcap and sha1==recorded_pcap["sha1"]:
+                    sha1_ok=True
+                if "md5" in recorded_pcap and md5==recorded_pcap["md5"]:
+                    md5_ok=True
+                    
+                if sha1_ok and sha256_ok and md5_ok:
+                    log("[-] Recorded Pcap file: PASS", use_log, log_file)
+                else:
+                    traffic_status=False
+                    log("[!] Recorded Pcap file: NOT PASS (one of the signatures is not verified)", use_log, log_file)
+
+        except:
+            log("[!] Recorded Pcap file not found: file is missing or path not found in report", use_log, log_file)
+            traffic_status= False
+
+        try:
+            session_keys_path = path/session_keys["path"]
+            with open(session_keys_path, "rb") as file:
+                raw = file.read()
+                sha256 = hashlib.sha256(raw).hexdigest()
+                sha1 = hashlib.sha1(raw).hexdigest()
+                md5 = hashlib.md5(raw).hexdigest()
+                
+                sha256_ok=False
+                sha1_ok=False
+                md5_ok= False
+                if "sha256" in session_keys and sha256==session_keys["sha256"]:
+                    sha256_ok=True
+                if "sha1" in session_keys and sha1==session_keys["sha1"]:
+                    sha1_ok=True
+                if "md5" in session_keys and md5==session_keys["md5"]:
+                    md5_ok=True
+                
+                if sha1_ok and sha256_ok and md5_ok:
+                    log("[-] Session keys file: PASS", use_log, log_file)
+                else:
+                    traffic_status=False
+                    log("[!] Session keys file: NOT PASS (one of the signatures is not verified)", use_log, log_file)
+
+        except:
+            log("[!] Session keys file not found: file is missing or path not found in report", use_log, log_file)
+            traffic_status= False
+
+
     if "emails" not in report:
         log("[!] Report not well formatted: emails missing", use_log, log_file)
         return
@@ -198,7 +264,7 @@ def check_cli(path:Path, use_log:bool):
     email_tampered=[]
     email_notwell_formatted=[]
     email_ok=[]
-
+    log("[-] Analyzing emails", use_log, log_file)
     with typer.progressbar(length=len(emails), label="  -> loading") as progress:
         for email in emails:
             progress.update(1)
@@ -277,7 +343,7 @@ def check_cli(path:Path, use_log:bool):
             log(f"     {x}", use_log, log_file)
 
         
-        if len(missmatch)+len(missing_emails)+len(email_tampered)+len(email_notwell_formatted)==0:
+        if traffic_status and len(missmatch)+len(missing_emails)+len(email_tampered)+len(email_notwell_formatted)==0:
             log("\n\n[-] RESULT: Verification successful", use_log, log_file)
         else:
             log("\n\n[!] RESULT: Verification failed", use_log, log_file)
