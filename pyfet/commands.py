@@ -17,6 +17,7 @@ import pyfet.utils.mail as mail
 from pathlib import Path
 import pyfet.utils.generics as tools
 from ipaddress import IPv6Address
+from pyfet.sniffer.utils import ForensicSniffer 
 
 
 def log(message:str, use_log:bool=False, log_file:IO[Any]=None):
@@ -42,14 +43,15 @@ def initiate_log_file(path:Path, command:str,  params:List[Tuple[str, str]])->IO
     return log_file 
 
 
-def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
+def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool, traffic:bool):
     try:
         log_file=None
         if use_log:
             log_file = initiate_log_file(save_path, "get", [
                 ("save_path", save_path), 
                 ("config_path", config_path), 
-                ("q", q)
+                ("q", q),
+                ("traffic", traffic)
                 ])
 
         domains= mail.load_supported_domain(config_path=config_path)
@@ -79,12 +81,19 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
         log(f"More info: {e}", use_log, log_file)
         return
 
+    sniffer=None
+    if traffic:
+        sniffer = ForensicSniffer(save_path=save_path)
+        log("[-] Traffic recording: start")
+        sniffer.start_sniff()
+
     try:
         log("[-] Starting login phase", use_log, log_file)
         oauth.login()
         log("[-] Login successfull", use_log, log_file)
     except Exception as e:
         log(f"[!] Login Failed:{e}", use_log, log_file)
+        sniffer.abort_sniff() if traffic else None
         return
     
     query=""
@@ -99,6 +108,7 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
     except Exception as e:
         log("[!!!] something strage happend: impossible to read basic data", use_log, log_file)
         log(f"more info: {e}", use_log, log_file)
+        sniffer.abort_sniff() if traffic else None
         return
 
     try:
@@ -107,7 +117,12 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
     except Exception as e:
         log("[!] search email failed", use_log, log_file)
         log(f"more info: {e}",use_log, log_file)
+        sniffer.abort_sniff() if traffic else None
         return
+    
+    if traffic:
+        sniffer.stop_sniff()
+        log(f"[-] Traffic recording: stop", use_log, log_file)
 
     log(f"[-] Saving emails on device", use_log, log_file)
     extraction_name = mail.save_emails(path=save_path, emails=emails)
@@ -118,13 +133,17 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool):
         user_email=email,
         query=query, 
         save_path= save_path, 
-        forensic_emails=emails
+        forensic_emails=emails, 
+        sniffer=sniffer
         )
     
     log("\n[!!!] REMEMBER TO MANUALLY SIGN YOUR REPORT", use_log, log_file)
     log("  -> you can sign the report using 'pyfet sign' ", use_log, log_file)
     log_path= Path(log_file.name).resolve()
     shutil.move(log_path, save_path/extraction_name)
+    if traffic:
+        shutil.move(sniffer.save_file.path, save_path/extraction_name)
+        shutil.move(sniffer.session_keys_file.path, save_path/extraction_name)
     
 
 def check_cli(path:Path, use_log:bool):

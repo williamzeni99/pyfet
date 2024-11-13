@@ -13,6 +13,7 @@ from pyfet.oauth.IMAP_auth import IMAPAuth
 from pyfet.oauth.google_oauth import GoogleOAuth
 from pyfet.oauth.login_interface import ForensicEmail, Auth
 from pyfet.oauth.microsoft_oauth import MicrosoftOAuth
+from pyfet.sniffer.utils import ForensicSniffer
 
 class IMAPConfig:
     def __init__(self, host: str, port: int = 993, ssl: bool = True):
@@ -160,7 +161,8 @@ def generate_report(
     user_email: str,
     query:str,
     forensic_emails: List[ForensicEmail], 
-    save_path: Path
+    save_path: Path,
+    sniffer: ForensicSniffer|None
 ):
     """
     Generate a JSON report of the email extraction results.
@@ -177,9 +179,23 @@ def generate_report(
     report = {
         "name": extraction_name,
         "email": user_email,
-        "search_query":query,
-        "emails": []
+        "search_query":query
     }
+
+    if sniffer is not None:
+        report["recorded_pcap"]={}
+        report["recorded_pcap"]["path"] = str(sniffer.save_file.path)
+        report["recorded_pcap"]["sha256"] = sniffer.save_file.sha256
+        report["recorded_pcap"]["sha1"] = sniffer.save_file.sha1
+        report["recorded_pcap"]["md5"] = sniffer.save_file.md5
+        report["session_keys"]={}
+        report["session_keys"]["path"] = str(sniffer.session_keys_file.path)
+        report["session_keys"]["sha256"] = sniffer.session_keys_file.sha256
+        report["session_keys"]["sha1"] = sniffer.session_keys_file.sha1
+        report["session_keys"]["md5"] = sniffer.session_keys_file.md5
+    
+    report["emails"]=[]
+
 
     # Create a progress bar for processing forensic emails
     with typer.progressbar(length=len(forensic_emails), label="  -> writing") as progress:

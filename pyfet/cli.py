@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import typer
 from typing import Optional
 from pyfiglet import Figlet
@@ -23,7 +26,8 @@ def get(
     save_path: Optional[Path] = typer.Option(default="./", exists=True, file_okay=False, dir_okay=True,writable=True, help="Path to save the results"),
     config_path: Optional[Path] = typer.Option(default=Path(__file__).parent / "config.json", exists=True, file_okay=True, dir_okay=False,writable=True, help="Path of the configuration file (rename it as config.json)"),
     q: Optional[bool] = typer.Option(default=True, help="The tool will ask for a search query" ),
-    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet")
+    log: Optional[bool]= typer.Option(default=True, help="save log of pyfet"),
+    traffic: Optional[bool]= typer.Option(default=True, help="record machine network traffic")
 ):  
     """
     It acquires the emails and creates a report with the file hashes 
@@ -36,10 +40,30 @@ def get(
         typer.echo(f"  Config path: {config_path}")
     if q:
         typer.echo(f"  Search query: {q}")
+    if traffic:
+        typer.echo(f"  Record network traffic: {traffic}")
+            
+        if  "HOOKED_SSLKEYLOGFILE" not in os.environ or "LD_PRELOAD" not in os.environ:
+            python_path = sys.executable
+            typer.echo("\n[!] when running with traffic option enabled you must run it as root")
+            typer.echo("[!!] Re-running the program as root")
+            lib_dir = Path(__file__).resolve().parent / "sniffer" / "libsslkeylog.so"
+            sessionkeys_file_like = save_path / 'sessionkeys' #the lib will produce a file such as sessionkeys.xxx.xxx, after the execution it is going to be renamed
+            # Rerun with sudo -E
+
+            envs=os.environ.copy()
+            if "HOOKED_SSLKEYLOGFILE" not in envs:
+                envs["HOOKED_SSLKEYLOGFILE"]=str(sessionkeys_file_like)
+            
+            if "LD_PRELOAD" not in envs:
+                envs["LD_PRELOAD"] = str(lib_dir)
+
+            subprocess.run([python_path] + sys.argv, env=envs)
+            sys.exit()  # kill current process
     
 
     typer.echo("\n")
-    commands.get_cli(save_path=save_path, config_path=config_path, q=q, use_log=log)
+    commands.get_cli(save_path=save_path, config_path=config_path, q=q, use_log=log, traffic=traffic)
 
 @app.command("check")
 def checktamper(
