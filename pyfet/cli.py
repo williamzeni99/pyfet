@@ -45,8 +45,8 @@ def get(
             
         if  "HOOKED_SSLKEYLOGFILE" not in os.environ or "LD_PRELOAD" not in os.environ:
             python_path = sys.executable
-            typer.echo("\n[!] when running with traffic option enabled you must run it as root")
-            typer.echo("[!!] Re-running the program as root")
+            typer.echo("\n[!] when running with traffic option enabled, some of the code must be run as root")
+            typer.echo("[!!] Re-running the program after sudo password")
             lib_dir = Path(__file__).resolve().parent / "sniffer" / "libsslkeylog.so"
             sessionkeys_file_like = save_path / 'sessionkeys' #the lib will produce a file such as sessionkeys.xxx.xxx, after the execution it is going to be renamed
             # Rerun with sudo -E
@@ -57,7 +57,7 @@ def get(
             
             if "LD_PRELOAD" not in envs:
                 envs["LD_PRELOAD"] = str(lib_dir)
-
+            subprocess.run(["sudo","-v"])
             subprocess.run([python_path] + sys.argv, env=envs)
             sys.exit()  # kill current process
     
