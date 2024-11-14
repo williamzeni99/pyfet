@@ -94,6 +94,9 @@ class FET:
             
         def check_dkim(fet:FET)->Tuple[bool, List[str]]:
 
+            original_validate_signature_fields = dkimpy.validate_signature_fields
+
+
             dkims=fet.parsed.get_all('DKIM-Signature')
             logs=[]
             logs.append(f"dkims present: {dkims!=None}")
@@ -146,6 +149,7 @@ class FET:
                 result=dkimpy.verify(message=fet.raw)
                 logs.append(f"dkim-{index} is passed: {result} {'with date ' + str(last_received_date) if last_received_date else ''}")
                 results.append(result)
+                dkimpy.validate_signature_fields = original_validate_signature_fields
 
             return all(results), logs
         
@@ -177,16 +181,28 @@ class FET:
                 
             return all(results), logs
         
+        def check_arc_chain(fet:FET)->Tuple[bool, List[str]]:
+            ispass, _ ,reason= dkimpy.arc_verify(message=fet.raw)
+            result= ispass == b'pass'
+            logs=[]
+            logs.append(f"arc-chain validation result: {ispass.decode('utf-8')}, {reason}")
+            if reason=="Most recent ARC-Message-Signature did not validate":
+                logs.append("arc-chain WARNING: this fail reason is common for microsoft emails. Microsoft usually breaks dkim signatures.")
+
+            return result, logs
+        
         
         logs=[]
         spf_check, spf_logs= check_spf(fet=self)
         dkim_check, dkim_logs=check_dkim(fet=self)
         dmarc_check, dmarc_logs = check_dmarc(fet=self)
+        arc_check, arc_logs = check_arc_chain(fet=self)
         logs.extend(spf_logs)
         logs.extend(dkim_logs)
         logs.extend(dmarc_logs)
+        logs.extend(arc_logs)
 
-        return spf_check and dkim_check and dmarc_check, logs
+        return spf_check and dkim_check and dmarc_check and arc_check, logs
 
 
     def has_malware(self)->Tuple[bool, str]:
