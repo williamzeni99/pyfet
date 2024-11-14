@@ -1,5 +1,6 @@
 from email.utils import parsedate_to_datetime
 from logging import Logger
+import re
 from typing import List, Tuple
 import email
 import dns
@@ -22,6 +23,9 @@ class FET:
     def scan(self)->Tuple[bool, List[str]]:
 
         def check_spf(fet:FET)->Tuple[bool, List[str]]:
+            """
+            It checks the first spf starting from the top, making some extra analisys
+            """
             logs=[]
 
             is_well_formatted = True
@@ -90,58 +94,88 @@ class FET:
             
         def check_dkim(fet:FET)->Tuple[bool, List[str]]:
 
-            dkim=fet.parsed.get('DKIM-Signature')
+            dkims=fet.parsed.get_all('DKIM-Signature')
             logs=[]
-            logs.append(f"dkim present: {dkim!=None}")
+            logs.append(f"dkims present: {dkims!=None}")
 
-            if not dkim:
+            if not dkims:
                 return False, logs
             
-            result=parser.validate_dkim_signature_header_RFC8616(dkim)
-            logs.append(f"dkim is well formatted: {result}")
+            results=[]
+            for index, dkim in enumerate(dkims):
+                result=parser.validate_dkim_signature_header_RFC8616(dkim)
+                logs.append(f"dkim-{index} is well formatted: {result}")
 
-            if not result:
-                return False, logs
-            
-            tag_list = dkimpy.parse_tag_value(bytes(dkim, "utf-8"))
-
-            last_received_date=None
-            if b'x' in tag_list:
-                receiveds = fet.parsed.get_all("Received")
-                if len(receiveds)==0:
-                    logs.append("impossible to verify the dkim signature, no received header found")
-                    return False, logs
+                if not result:
+                    results.append(result)
+                    break
                 
-                last_received=None
-                for receive in receiveds:
-                    if parser.validate_received_header_RFC5322(receive):
-                        last_received=receive
+                tag_list = dkimpy.parse_tag_value(bytes(dkim, "utf-8"))
+
+                last_received_date=None
+                if b'x' in tag_list:
+                    receiveds = fet.parsed.get_all("Received")
+                    if len(receiveds)==0:
+                        logs.append(f"impossible to verify the dkim-{index} signature, no received header found")
+                        results.append(False)
+                        break
+                    
+                    last_received=None
+                    for receive in receiveds:
+                        if parser.validate_received_header_RFC5322(receive):
+                            last_received=receive
+                            break
+                    
+                    if last_received is None:
+                        logs.append(f"impossible to verify the dkim-{index} signature, no received is well formatted")
+                        results.append(False)
+                        break
+
+                    last_received_date = int(parsedate_to_datetime(last_received.split(';')[-1].strip()).timestamp())
+
+                    try:
+                        my_validate_signature_fields(sig=tag_list, now=last_received_date) is None
+                        logs.append(f"dkim-{index} tags well formatted: {True}")
+                    except Exception as e:
+                        logs.append(f"dkim-{index} tags well formatted: {False} - {e}")
+                        results.append(False)
                         break
                 
-                if last_received is None:
-                    logs.append("impossible to verify the dkim signature, no received is well formatted")
-                    return False, logs
+                    dkimpy.validate_signature_fields= lambda x: None
 
-                last_received_date = int(parsedate_to_datetime(last_received.split(';')[-1].strip()).timestamp())
+                result=dkimpy.verify(message=fet.raw)
+                logs.append(f"dkim-{index} is passed: {result} {'with date ' + str(last_received_date) if last_received_date else ''}")
+                results.append(result)
 
-                try:
-                    my_validate_signature_fields(sig=tag_list, now=last_received_date) is None
-                    logs.append(f"dkim tags well formatted: {True}")
-                except Exception as e:
-                    logs.append(f"dkim tags well formatted: {False} - {e}")
-                    return False, logs
-            
-                dkimpy.validate_signature_fields= lambda x: None
-
-            result=dkimpy.verify(message=fet.raw)
-            logs.append(f"dkim is passed: {result} {'with date ' + str(last_received_date) if last_received_date else ''}")
-
-
-            return result, logs
+            return all(results), logs
         
 
         def check_dmarc(fet:FET)->Tuple[bool, List[str]]:
-            return False, []
+            dmarcs=fet.parsed.get_all('Authentication-Results')
+            logs=[]
+            logs.append(f"dmarcs present: {dmarcs!=None}")
+
+            if not dmarcs:
+                return False, logs
+            
+            results=[]
+            for index, dmarc in enumerate(dmarcs):
+                result=parser.validate_authentication_results_header_RFC8601(dmarc)
+                logs.append(f"dmarc-{index} is well formatted: {result}")
+
+                if not result:
+                    results.append(result)
+                    break
+                
+                result = "dmarc=pass" in dmarc.lower()
+                logs.append(f"dmarc-{index} is passed: {result}")
+                results.append(result)
+                match = re.search(r"dkim=(\w+)", dmarc)
+                logs.append(f"dmarc-{index} dkim tag: {match.group(1)}")
+                match = re.search(r"spf=(\w+)", dmarc)
+                logs.append(f"dmarc-{index} spf tag: {match.group(1)}")
+                
+            return all(results), logs
         
         
         logs=[]
