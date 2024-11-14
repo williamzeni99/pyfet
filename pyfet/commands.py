@@ -143,8 +143,8 @@ def get_cli(save_path:Path, config_path:Path, q:bool, use_log:bool, traffic:bool
     log_path= Path(log_file.name).resolve()
     shutil.move(log_path, save_path/extraction_name)
     if traffic:
-        shutil.move(sniffer.save_file.path, save_path/extraction_name)
-        shutil.move(sniffer.session_keys_file.path, save_path/extraction_name)
+        shutil.move(sniffer.save_file.filename, save_path/extraction_name)
+        shutil.move(sniffer.session_keys_file.filename, save_path/extraction_name)
     
 
 def check_cli(path:Path, use_log:bool):
@@ -194,7 +194,7 @@ def check_cli(path:Path, use_log:bool):
         recorded_pcap = report["recorded_pcap"]
         session_keys = report["session_keys"]
         try:
-            pcap_path = path/recorded_pcap["path"]
+            pcap_path = path/recorded_pcap["filename"]
             with open(pcap_path, "rb") as file:
                 raw = file.read()
                 sha256 = hashlib.sha256(raw).hexdigest()
@@ -222,7 +222,7 @@ def check_cli(path:Path, use_log:bool):
             traffic_status= False
 
         try:
-            session_keys_path = path/session_keys["path"]
+            session_keys_path = path/session_keys["filename"]
             with open(session_keys_path, "rb") as file:
                 raw = file.read()
                 sha256 = hashlib.sha256(raw).hexdigest()
@@ -407,8 +407,9 @@ def scan_cli(path: Path, use_log: bool):
                 eml = f.read()
                 emails.append(FET(raw=eml, mail_id= path.name))
     else:
+        email_path= path/"emails"
         log("[-] Loading eml files", use_log, log_file)
-        eml_files = list(path.glob("*.eml"))
+        eml_files = list(email_path.glob("*.eml"))
         log(f"  -> found {len(eml_files)} emails",use_log, log_file)
         if len(eml_files)==0:
             log("[!] No emails found: scan aborted", use_log, log_file)

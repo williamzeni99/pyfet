@@ -15,7 +15,7 @@ class ForensicSniffer:
     class ForensicFile:
         def __init__(self, path:Path) -> None:
             with open(path, 'rb') as file:
-                self.path= path.name
+                self.filename= path.name
                 self.raw = file.read()
 
             self.sha256 = hashlib.sha256(self.raw).hexdigest()

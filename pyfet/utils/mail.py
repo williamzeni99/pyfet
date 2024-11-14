@@ -184,12 +184,12 @@ def generate_report(
 
     if sniffer is not None:
         report["recorded_pcap"]={}
-        report["recorded_pcap"]["path"] = str(sniffer.save_file.path)
+        report["recorded_pcap"]["filename"] = str(sniffer.save_file.filename)
         report["recorded_pcap"]["sha256"] = sniffer.save_file.sha256
         report["recorded_pcap"]["sha1"] = sniffer.save_file.sha1
         report["recorded_pcap"]["md5"] = sniffer.save_file.md5
         report["session_keys"]={}
-        report["session_keys"]["path"] = str(sniffer.session_keys_file.path)
+        report["session_keys"]["filename"] = str(sniffer.session_keys_file.filename)
         report["session_keys"]["sha256"] = sniffer.session_keys_file.sha256
         report["session_keys"]["sha1"] = sniffer.session_keys_file.sha1
         report["session_keys"]["md5"] = sniffer.session_keys_file.md5
