@@ -10,7 +10,7 @@ class IMAPAuth(Auth):
 
     def login(self):
         self.email=typer.prompt("> insert email")
-        password= typer.prompt("> insert password")
+        password= typer.prompt("> insert password", hide_input=True)
 
         
         imap_config = mail.get_manual_imap_config()
